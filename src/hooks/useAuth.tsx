@@ -15,6 +15,8 @@ import {
   signOut as firebaseSignOut,
   sendEmailVerification,
   updateProfile,
+  setPersistence,
+  browserLocalPersistence,
 } from "firebase/auth";
 import { auth } from "@/lib/firebaseClient"; // <-- ensure src/lib/firebase.ts exports `auth`
 
@@ -57,6 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+
+    setPersistence(auth, browserLocalPersistence).catch((e) => {
+      console.warn("[useauth] setPersistence failed:", e);
+    });
 
     // Subscribe to auth state changes FIRST to avoid races
     const unsub = onAuthStateChanged(auth, async (u) => {

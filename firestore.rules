@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(field) {
+      return isSignedIn() && request.auth.uid == resource.data[field];
+    }
+
+    function isOwnerWrite(field) {
+      return isSignedIn() && request.auth.uid == request.resource.data[field];
+    }
+
+    function isPublishedProperty() {
+      return resource.data.published == true || resource.data.status == "published";
+    }
+
+    // Public homepage collections (safe public read only)
+    match /popular_cities/{cityId} {
+      allow read: if true;
+    }
+
+    // Public agent profiles (read-only for role=agent)
+    match /users/{userId} {
+      allow get: if (isSignedIn() && request.auth.uid == userId) || resource.data.role == "agent";
+      allow list: if resource.data.role == "agent";
+      allow create, update, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Public analytics used for homepage (read-only + create)
+    match /view_events/{eventId} {
+      allow read: if true;
+      allow create: if true;
+    }
+
+    // Public reviews are readable; only owners can create/update/delete
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isOwnerWrite("author_uid");
+      allow update, delete: if isOwner("author_uid");
+    }
+
+    match /properties/{propertyId} {
+      allow get, list: if isPublishedProperty() || isOwner("agent_id");
+      allow create: if isOwnerWrite("agent_id");
+      allow update, delete: if isOwner("agent_id");
+    }
+
+    match /boost_requests/{boostId} {
+      allow get, list: if resource.data.status == "active";
+      allow create: if isOwnerWrite("agent_id");
+      allow update, delete: if isOwner("agent_id");
+    }
+
+    // Default: authenticated access only (no public writes)
+    match /{document=**} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

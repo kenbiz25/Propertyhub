@@ -28,10 +28,11 @@ const Navbar = () => {
   );
 
   const onClickListProperty = () => {
-    if (!auth.currentUser) {
-      navigate(`/auth?from=${encodeURIComponent("/list-property")}`);
+    if (!authReady) return;
+    if (!fbUser) {
+      navigate(`/auth?role=agent&from=${encodeURIComponent("/agent/list-property")}`);
     } else {
-      navigate("/list-property");
+      navigate("/agent/list-property");
     }
   };
 
@@ -44,8 +45,8 @@ const Navbar = () => {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center glow-orange">
               <Home className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-xl">
-              House<span className="text-primary">hunter</span>
+            <span className="font-display font-bold text-base sm:text-xl whitespace-nowrap">
+              Kenya <span className="text-primary">Properties</span>
             </span>
           </Link>
 
@@ -56,6 +57,12 @@ const Navbar = () => {
             </Link>
             <Link to="/listings" className="text-muted-foreground hover:text-foreground transition-colors">
               Browse
+            </Link>
+            <Link to="/mortgage-calculator" className="text-muted-foreground hover:text-foreground transition-colors">
+              Mortgage
+            </Link>
+            <Link to="/agents" className="text-muted-foreground hover:text-foreground transition-colors">
+              Agents
             </Link>
             <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors">
               About
@@ -132,11 +139,25 @@ const Navbar = () => {
                 Browse
               </Link>
               <Link
+                to="/mortgage-calculator"
+                className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                Mortgage
+              </Link>
+              <Link
                 to="/about"
                 className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setIsOpen(false)}
               >
                 About
+              </Link>
+              <Link
+                to="/agents"
+                className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                Agents
               </Link>
 
               <div className="flex flex-col gap-2 px-4 pt-4 border-t border-border">

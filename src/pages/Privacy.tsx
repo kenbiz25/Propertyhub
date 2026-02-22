@@ -2,10 +2,17 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/layouts/Navbar";
 import Footer from "@/components/layouts/Footer";
+import SEO from "@/components/SEO";
 
 const Privacy = () => {
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Privacy Policy | Kenya Properties"
+        description="Read the Kenya Properties privacy policy – how we collect, use, and protect your personal data in compliance with Kenyan data protection laws."
+        canonical="/privacy"
+        noindex={false}
+      />
       <Navbar />
 
       <main className="pt-20">
@@ -68,7 +75,31 @@ const Privacy = () => {
               </section>
 
               <section>
-                <h2 className="font-display text-2xl font-semibold mb-4">4. Data Security</h2>
+                <h2 className="font-display text-2xl font-semibold mb-4">4. Cookies & Advertising</h2>
+                <p className="text-muted-foreground mb-4">
+                  We use cookies and similar technologies to keep you signed in, remember preferences,
+                  analyze traffic, and serve relevant ads. Some cookies are essential for the site to function.
+                </p>
+                <p className="text-muted-foreground mb-4">
+                  We partner with Google AdSense to display ads. Google and its partners may use cookies
+                  and device identifiers to personalize ads based on your visits to this and other sites.
+                </p>
+                <p className="text-muted-foreground">
+                  You can learn more about Google's advertising practices and opt out of personalized ads at{" "}
+                  <a
+                    href="https://adssettings.google.com/"
+                    className="text-primary hover:underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    adssettings.google.com
+                  </a>
+                  .
+                </p>
+              </section>
+
+              <section>
+                <h2 className="font-display text-2xl font-semibold mb-4">5. Data Security</h2>
                 <p className="text-muted-foreground">
                   We take reasonable measures to help protect information about you from loss, theft, 
                   misuse, unauthorized access, disclosure, alteration, and destruction. We use 
@@ -77,7 +108,7 @@ const Privacy = () => {
               </section>
 
               <section>
-                <h2 className="font-display text-2xl font-semibold mb-4">5. Your Rights</h2>
+                <h2 className="font-display text-2xl font-semibold mb-4">6. Your Rights</h2>
                 <p className="text-muted-foreground mb-4">
                   You have the right to:
                 </p>
@@ -90,11 +121,11 @@ const Privacy = () => {
               </section>
 
               <section>
-                <h2 className="font-display text-2xl font-semibold mb-4">6. Contact Us</h2>
+                <h2 className="font-display text-2xl font-semibold mb-4">7. Contact Us</h2>
                 <p className="text-muted-foreground">
                   If you have any questions about this Privacy Policy, please contact us at{" "}
-                  <a href="mailto:privacy@househunter.co.ke" className="text-primary hover:underline">
-                    privacy@househunter.co.ke
+                  <a href="mailto:privacy@kenyaproperties.co.ke" className="text-primary hover:underline">
+                    privacy@kenyaproperties.co.ke
                   </a>
                 </p>
               </section>

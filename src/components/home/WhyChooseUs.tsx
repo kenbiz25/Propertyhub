@@ -36,7 +36,7 @@ const WhyChooseUs = () => {
           <div>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm text-primary font-medium">Why Househunter?</span>
+              <span className="text-sm text-primary font-medium">Why Kenya Properties?</span>
             </div>
             
             <h2 className="font-display text-3xl md:text-4xl font-bold mb-6">
@@ -45,7 +45,7 @@ const WhyChooseUs = () => {
             </h2>
             
             <p className="text-muted-foreground text-lg mb-8">
-              Househunter connects you with verified properties and trusted agents across Kenya. 
+              Kenya Properties connects you with verified properties and trusted agents across Kenya. 
               Our platform is designed to make your property search seamless, secure, and successful.
             </p>
 

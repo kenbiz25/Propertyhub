@@ -1,8 +1,9 @@
-import { Home, Users, Shield, Award, Target, Heart, MapPin, Phone, Mail } from "lucide-react";
+import { Home, Users, Shield, Award, Target, Heart, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/layouts/Navbar";
 import Footer from "@/components/layouts/Footer";
+import SEO from "@/components/SEO";
 
 const stats = [
   { value: "10K+", label: "Properties Listed" },
@@ -34,32 +35,37 @@ const values = [
   },
 ];
 
-const team = [
-  {
-    name: "Amara Okafor",
-    role: "CEO & Founder",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400",
-  },
-  {
-    name: "James Mwangi",
-    role: "Head of Operations",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
-  },
-  {
-    name: "Sarah Kimani",
-    role: "Lead Property Specialist",
-    image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400",
-  },
-  {
-    name: "David Otieno",
-    role: "Technology Director",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
-  },
-];
+// const team = [
+//   {
+//     name: "Amara Okafor",
+//     role: "CEO & Founder",
+//     image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400",
+//   },
+//   {
+//     name: "James Mwangi",
+//     role: "Head of Operations",
+//     image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
+//   },
+//   {
+//     name: "Sarah Kimani",
+//     role: "Lead Property Specialist",
+//     image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400",
+//   },
+//   {
+//     name: "David Otieno",
+//     role: "Technology Director",
+//     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+//   },
+// ];
 
 const About = () => {
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="About Us | Kenya Properties"
+        description="Learn about Kenya Properties – Kenya's trusted real estate marketplace connecting buyers, renters, agents and developers since 2024. Verified listings across all 47 counties."
+        canonical="/about"
+      />
       <Navbar />
 
       <main className="pt-16">
@@ -70,14 +76,14 @@ const About = () => {
             <div className="max-w-3xl mx-auto text-center">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
                 <Home className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-primary">About Househunter</span>
+                <span className="text-sm font-medium text-primary">About Kenya Properties</span>
               </div>
               <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
                 Making Property Dreams
                 <span className="text-gradient"> Reality in Africa</span>
               </h1>
               <p className="text-lg text-muted-foreground">
-                Founded in 2023, Househunter is Kenya's leading real estate marketplace, 
+                Founded in 2023, Kenya Properties is Kenya's leading real estate marketplace, 
                 connecting millions of property seekers with verified listings across the continent.
               </p>
             </div>
@@ -109,7 +115,7 @@ const About = () => {
                   Our Mission
                 </h2>
                 <p className="text-muted-foreground mb-4">
-                  We believe everyone deserves a place to call home. Househunter was built to 
+                  We believe everyone deserves a place to call home. Kenya Properties was built to 
                   simplify the property search process in Africa, where fragmented markets and 
                   lack of transparency have long been barriers for property seekers.
                 </p>
@@ -147,7 +153,7 @@ const About = () => {
                 Our Core Values
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                These principles guide everything we do at Househunter
+                These principles guide everything we do at Kenya Properties
               </p>
             </div>
 
@@ -171,8 +177,8 @@ const About = () => {
             </div>
           </div>
         </section>
-
-        {/* Team */}
+        
+        {/* Team (temporarily disabled)
         <section className="py-20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
@@ -209,6 +215,7 @@ const About = () => {
             </div>
           </div>
         </section>
+        */}
 
         {/* Contact CTA */}
         <section className="py-20 bg-card border-y border-border">
@@ -232,30 +239,15 @@ const About = () => {
                         <p className="font-medium">Westlands, Nairobi, Kenya</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Phone className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Phone</p>
-                        <p className="font-medium">+254 700 000 000</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Mail className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Email</p>
-                        <p className="font-medium">hello@househunter.co.ke</p>
-                      </div>
+                    <div className="text-sm text-muted-foreground">
+                      For privacy, please reach us via in-app messaging.
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center justify-center">
                   <Button asChild size="lg" className="w-full md:w-auto">
                     <Link to="/auth">
-                      Join Househunter Today
+                      Join Kenya Properties Today
                     </Link>
                   </Button>
                 </div>

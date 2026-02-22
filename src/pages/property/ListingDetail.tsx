@@ -4,65 +4,23 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Heart, Share2, MapPin, Bed, Bath, Square, Car,
   Wifi, AirVent, Shield, Waves, Trees, ChevronLeft, ChevronRight,
-  Phone, Calendar, CheckCircle, Star, MessageCircle
+  CheckCircle, Star, MessageCircle, Download,
+  Facebook, Twitter, Link2, Instagram, Music2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Navbar from "@/components/layouts/Navbar";
 import Footer from "@/components/layouts/Footer";
-import { FavoriteButton } from "@/components/FavoriteButton";
-import { useFavorites } from "@/hooks/useFavorites";
-
-
+import SEO from "@/components/SEO";
+import { addDoc, collection, serverTimestamp, doc, getDoc, query as fsQuery, where, orderBy, getDocs, limit, setDoc, deleteDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebaseClient";
-import {
-  doc, getDoc, collection, query as fsQuery,
-  where, orderBy, getDocs, limit, serverTimestamp,
-  setDoc, deleteDoc
-} from "firebase/firestore";
+import { toast } from "sonner";
 
-// ---------- Mock fallback (keeps UX rich during migration) ----------
-const mockListing = {
-  id: "1",
-  title: "Luxury 4BR Villa in Karen",
-  description: `This stunning 4-bedroom villa in the prestigious Karen neighborhood offers the perfect blend of luxury and comfort. Set on a beautifully landscaped 0.5-acre plot, the property features high ceilings, natural light throughout, and premium finishes.
-
-The main house includes a spacious living room with a fireplace, a modern open-plan kitchen with granite countertops and top-of-the-line appliances, a formal dining room, and a family room. The master suite features a walk-in closet and an en-suite bathroom with a jacuzzi.
-
-Additional features include a detached staff quarters, a double garage, a swimming pool, and mature gardens with indigenous trees. The property is located in a secure gated community with 24-hour security.`,
-  price: 45000000,
-  type: "sale",
-  city: "Nairobi",
-  neighborhood: "Karen",
-  address: "Karen Road, off Langata Road",
-  bedrooms: 4,
-  bathrooms: 3,
-  area: 350,
-  plotSize: 2000,
-  yearBuilt: 2019,
-  parking: 2,
-  verified: true,
-  promoted: true,
-  images: [
-    "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200",
-    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200",
-    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200",
-    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200",
-    "https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=1200",
-  ],
-  amenities: ["wifi", "air_conditioning", "security", "pool", "garden", "parking"],
-  agent: {
-    name: "Grace Wanjiku",
-    phone: "+254 712 345 678",
-    email: "grace@househunter.co.ke",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400",
-    listings: 24,
-    rating: 4.9,
-  },
-  lat: -1.3179,
-  lng: 36.7001,
-};
+const DEFAULT_IMAGES = [
+  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80",
+  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80",
+  "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&q=80",
+];
 
 type Review = {
   id: string;
@@ -99,8 +57,12 @@ const ListingDetail = () => {
   const [currentImage, setCurrentImage] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [listing, setListing] = useState<any | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const user = auth.currentUser;
 
   // Load listing by id
@@ -124,8 +86,6 @@ const ListingDetail = () => {
           const amenities: string[] = d?.amenities ?? [];
           const agent = d?.agent ?? {
             name: d?.agent_name ?? "Agent",
-            phone: d?.agent_phone ?? "",
-            email: d?.agent_email ?? "",
             image: d?.agent_image ?? "",
             listings: d?.agent_listings ?? 0,
             rating: d?.agent_rating ?? 0,
@@ -133,6 +93,7 @@ const ListingDetail = () => {
 
           const normalized = {
             id: snap.id,
+            agent_id: d?.agent_id ?? d?.agent?.id ?? null,
             title: d?.title ?? "Untitled",
             description: d?.description ?? "",
             price: Number(d?.price ?? 0),
@@ -148,22 +109,30 @@ const ListingDetail = () => {
             parking: Number(d?.parking ?? 0),
             verified: Boolean(d?.verified ?? d?.isVerified ?? false),
             promoted: Boolean(d?.featured ?? d?.promoted ?? false),
-            images: images.length ? images : mockListing.images,
-            amenities: amenities.length ? amenities : mockListing.amenities,
+            images: images.length ? images : DEFAULT_IMAGES,
+            video_urls: Array.isArray(d?.video_urls) ? d.video_urls : (Array.isArray(d?.videos) ? d.videos : []),
+            amenities,
             agent,
             lat: Number(d?.lat ?? 0),
             lng: Number(d?.lng ?? 0),
           };
 
-          if (alive) setListing(normalized);
+          if (alive) {
+            setListing(normalized);
+            setNotFound(false);
+          }
         } else {
-          // Fallback to mock (keeps page styled)
-          if (alive) setListing(mockListing);
+          if (alive) {
+            setListing(null);
+            setNotFound(true);
+          }
         }
       } catch (e) {
         console.error("[ListingDetail] load error:", e);
-        // Fallback to mock so page still renders
-        if (alive) setListing(mockListing);
+        if (alive) {
+          setListing(null);
+          setNotFound(true);
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -198,6 +167,29 @@ const ListingDetail = () => {
       alive = false;
     };
   }, [id]);
+
+  // Track view (once per session)
+  useEffect(() => {
+    if (!listing?.id) return;
+    const key = `hh_viewed_${listing.id}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {}
+
+    (async () => {
+      try {
+        await addDoc(collection(db, "view_events"), {
+          property_id: listing.id,
+          agent_id: listing.agent_id ?? listing.agent?.id ?? null,
+          city: listing.city ?? null,
+          created_at: serverTimestamp(),
+        });
+      } catch (e) {
+        console.warn("[ListingDetail] view tracking failed:", e);
+      }
+    })();
+  }, [listing?.id, listing?.city, listing?.agent_id, listing?.agent?.id]);
 
   // Favorite state for signed-in user
   useEffect(() => {
@@ -257,8 +249,73 @@ const ListingDetail = () => {
     });
   }, [listing]);
 
+  const isOwner = !!(listing?.agent_id && auth.currentUser?.uid === listing.agent_id);
+
+  const videoUrls = useMemo(
+    () => (Array.isArray(listing?.video_urls) ? listing.video_urls.filter(Boolean).slice(0, 5) : []),
+    [listing]
+  );
+
+  const getYouTubeEmbedUrl = (url: string) => {
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes("youtu.be")) {
+        return `https://www.youtube.com/embed/${u.pathname.replace("/", "")}`;
+      }
+      if (u.searchParams.get("v")) {
+        return `https://www.youtube.com/embed/${u.searchParams.get("v")}`;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
+
+  const shareListing = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: listing?.title ?? "Property", url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard");
+      }
+    } catch (err) {
+      console.warn("Share failed:", err);
+      toast.error("Unable to share link");
+    }
+  };
+
+  const handleContactAgent = () => {
+    const waNumber = listing?.agent_whatsapp?.replace(/[^0-9]/g, "") || "254705091683";
+    const text = encodeURIComponent(`Hi, I'm interested in your property: ${listing?.title ?? ""}`);
+    window.open(`https://wa.me/${waNumber}?text=${text}`, "_blank", "noopener,noreferrer");
+  };
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copied to clipboard");
+    } catch {
+      toast.error("Unable to copy link");
+    }
+  };
+
+  const shareLinks = useMemo(() => {
+    if (!listing) return [] as { label: string; href: string; Icon: React.ComponentType<{ className?: string }> }[];
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent(`${listing.title} on Kenya Properties`);
+    return [
+      { label: "Instagram", href: `https://www.instagram.com/`, Icon: Instagram },
+      { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${url}`, Icon: Facebook },
+      { label: "Twitter", href: `https://twitter.com/intent/tweet?text=${text}&url=${url}`, Icon: Twitter },
+      { label: "WhatsApp", href: `https://wa.me/?text=${text}%20${url}`, Icon: MessageCircle },
+      { label: "TikTok", href: `https://www.tiktok.com/`, Icon: Music2 },
+    ];
+  }, [listing]);
+
   // Early states
-  if (loading || !listing) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -272,9 +329,117 @@ const ListingDetail = () => {
     );
   }
 
+  if (notFound || !listing) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-16">
+          <div className="container mx-auto px-4">
+            <div className="glass-card rounded-2xl p-10 text-center">
+              <h1 className="font-display text-2xl font-bold mb-2">Listing not found</h1>
+              <p className="text-muted-foreground mb-6">
+                This property may have been removed or is no longer available.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button asChild>
+                  <Link to="/listings">Browse Listings</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/list-property">List a Property</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+    async function submitReview() {
+      if (!listing?.id || !user) return;
+      if (!reviewComment.trim()) return;
+      try {
+        setReviewSubmitting(true);
+        await addDoc(collection(db, "reviews"), {
+          property_id: listing.id,
+          agent_id: listing.agent_id ?? listing.agent?.id ?? null,
+          author_uid: user.uid,
+          author_name: user.displayName ?? user.email ?? "Anonymous",
+          rating: reviewRating,
+          comment: reviewComment.trim(),
+          created_at: serverTimestamp(),
+        });
+        setReviewComment("");
+        setReviewRating(5);
+        // refresh list
+        const q = fsQuery(
+          collection(db, "reviews"),
+          where("property_id", "==", listing.id),
+          orderBy("created_at", "desc"),
+          limit(10)
+        );
+        const snap = await getDocs(q);
+        const items = snap.docs.map((d) => toReview(d.data(), d.id));
+        setReviews(items);
+      } finally {
+        setReviewSubmitting(false);
+      }
+    }
+
+
+
+  const seoTitle = listing
+    ? `${listing.title} – ${listing.city}${listing.neighborhood ? `, ${listing.neighborhood}` : ""} | Kenya Properties`
+    : "Property Listing | Kenya Properties";
+  const seoDescription = listing
+    ? `${listing.title} for ${listing.type} in ${listing.city}${listing.neighborhood ? `, ${listing.neighborhood}` : ""}. KES ${new Intl.NumberFormat("en-KE").format(listing.price)}. ${listing.description?.slice(0, 120) ?? ""}`
+    : "View property details on Kenya Properties.";
+  const seoImage = listing?.images?.[0] ?? listing?.image ?? undefined;
+  const listingSchema = listing
+    ? {
+        "@context": "https://schema.org",
+        "@type": "RealEstateListing",
+        "name": listing.title,
+        "description": listing.description,
+        "url": `https://kenyaproperties.co.ke/listing/${id}`,
+        "image": seoImage,
+        "offers": {
+          "@type": "Offer",
+          "price": listing.price,
+          "priceCurrency": "KES",
+          "availability": "https://schema.org/InStock",
+        },
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": listing.neighborhood || listing.city,
+          "addressRegion": listing.city,
+          "addressCountry": "KE",
+        },
+      }
+    : undefined;
+
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        canonical={`/listing/${id}`}
+        image={seoImage}
+        type="article"
+        schema={listingSchema}
+      />
       <Navbar />
+
+      {/* Floating Share Button */}
+      <button
+        onClick={shareListing}
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-primary-foreground shadow-lg hover:bg-primary/90"
+        aria-label="Share property"
+      >
+        <Share2 className="w-4 h-4" />
+        <span className="text-sm font-semibold hidden sm:inline">Share</span>
+      </button>
 
       <main className="pt-16">
         {/* Breadcrumb */}
@@ -329,33 +494,6 @@ const ListingDetail = () => {
             </div>
             
 
-              
-<div className="absolute top-4 right-4 flex gap-2">
-  <FavoriteButton
-    active={id ? isFavorite(id) : false}
-    onToggle={async () => {
-      try {
-        if (!auth.currentUser) {
-          navigate("/auth", { state: { from: `/listing/${id}` } });
-          return;
-        }
-        if (id) await toggleFavorite(id);
-      } catch (err: any) {
-        if (err?.message === "AUTH_REQUIRED") {
-          navigate("/auth", { state: { from: `/listing/${id}` } });
-        } else {
-          console.error("[ListingDetail] toggleFavorite error:", err);
-        }
-      }
-    }}
-  />
-  <button className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors">
-    <Share2 className="w-5 h-5" />
-  </button>
-</div>
-
-
-
             {/* Action Buttons */}
             <div className="absolute top-4 right-4 flex gap-2">
               <button
@@ -366,9 +504,22 @@ const ListingDetail = () => {
               >
                 <Heart className={`w-5 h-5 ${isFavorite ? "fill-current" : ""}`} />
               </button>
-              <button className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors">
+              <button
+                onClick={shareListing}
+                className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors"
+              >
                 <Share2 className="w-5 h-5" />
               </button>
+              {isOwner && (
+                <a
+                  href={listing.images[currentImage]}
+                  download
+                  className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors"
+                  aria-label="Download image"
+                >
+                  <Download className="w-5 h-5" />
+                </a>
+              )}
             </div>
 
             {/* Badges */}
@@ -446,9 +597,9 @@ const ListingDetail = () => {
                   <p className="font-display text-3xl font-bold text-primary mb-4">
                     KES {formatPrice(listing.price)}
                   </p>
-                  <Button className="w-full" size="lg">
+                  <Button className="w-full bg-green-600 hover:bg-green-700" size="lg" onClick={handleContactAgent}>
                     <MessageCircle className="w-5 h-5 mr-2" />
-                    Contact Agent
+                    WhatsApp Agent
                   </Button>
                 </div>
 
@@ -464,23 +615,74 @@ const ListingDetail = () => {
                   </div>
                 </div>
 
+                {/* Share */}
+                <div className="glass-card rounded-2xl p-6">
+                  <h2 className="font-display text-xl font-semibold mb-4">Share this property</h2>
+                  <div className="flex flex-wrap gap-3">
+                    {shareLinks.map((item) => (
+                      <a
+                        key={item.label}
+                        href={item.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-4 py-2 text-sm text-foreground hover:bg-muted"
+                        aria-label={`Share on ${item.label}`}
+                      >
+                        <item.Icon className="w-4 h-4" />
+                        {item.label}
+                      </a>
+                    ))}
+                    <Button variant="outline" size="sm" onClick={copyShareLink}>
+                      <Link2 className="w-4 h-4 mr-2" />
+                      Copy link
+                    </Button>
+                  </div>
+                </div>
+
                 {/* Amenities */}
                 <div className="glass-card rounded-2xl p-6">
                   <h2 className="font-display text-xl font-semibold mb-4">Amenities</h2>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {amenityTiles.map((amenity, index) => {
-                      const Icon = amenity.icon;
-                      return (
-                        <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Icon className="w-5 h-5 text-primary" />
+                  {amenityTiles.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      Amenities will appear here once provided by the listing owner.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {amenityTiles.map((amenity, index) => {
+                        const Icon = amenity.icon;
+                        return (
+                          <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Icon className="w-5 h-5 text-primary" />
+                            </div>
+                            <span className="text-sm">{amenity.name}</span>
                           </div>
-                          <span className="text-sm">{amenity.name}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+
+                {/* Video Previews */}
+                {videoUrls.length > 0 && (
+                  <div className="glass-card rounded-2xl p-6">
+                    <h2 className="font-display text-xl font-semibold mb-4">Video Tour</h2>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {videoUrls.map((url: string, index: number) => (
+                        <div key={index} className="aspect-video rounded-xl overflow-hidden bg-muted/50">
+                          <iframe
+                            src={getYouTubeEmbedUrl(url)}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            loading="lazy"
+                            title={`Video tour ${index + 1}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Map */}
                 {listing.lat && listing.lng && (
@@ -500,8 +702,37 @@ const ListingDetail = () => {
                 <div className="glass-card rounded-2xl p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="font-display text-xl font-semibold">Reviews</h2>
-                    <Button variant="outline" size="sm">Write a Review</Button>
+                    {!user && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to="/auth">Sign in to review</Link>
+                      </Button>
+                    )}
                   </div>
+
+                  {user && (
+                    <div className="mb-6 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Rating</span>
+                        <select
+                          value={reviewRating}
+                          onChange={(e) => setReviewRating(Number(e.target.value))}
+                          className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+                        >
+                          {[5, 4, 3, 2, 1].map((v) => (
+                            <option key={v} value={v}>{v} Star{v > 1 ? "s" : ""}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <Textarea
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder="Share your experience..."
+                      />
+                      <Button onClick={submitReview} disabled={reviewSubmitting || !reviewComment.trim()}>
+                        {reviewSubmitting ? "Submitting…" : "Submit Review"}
+                      </Button>
+                    </div>
+                  )}
 
                   <div className="space-y-4">
                     {reviews.length === 0 && (
@@ -565,29 +796,12 @@ const ListingDetail = () => {
                     </div>
                   </div>
 
-                  {/* Contact Form */}
-                  <form className="space-y-4">
-                    <Input placeholder="Your Name" />
-                    <Input type="email" placeholder="Your Email" />
-                    <Input type="tel" placeholder="Phone Number" />
-                    <Textarea placeholder="I'm interested in this property..." rows={3} />
-                    <Button className="w-full" size="lg">
-                      <MessageCircle className="w-5 h-5 mr-2" />
-                      Send Message
-                    </Button>
-                  </form>
-
-                  <div className="mt-4 pt-4 border-t border-border space-y-2">
-                    {listing.agent?.phone && (
-                      <Button variant="outline" className="w-full">
-                        <Phone className="w-4 h-4 mr-2" />
-                        Call Agent
-                      </Button>
-                    )}
-                    <Button variant="outline" className="w-full">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Schedule Viewing
-                    </Button>
+                  <Button className="w-full mb-4 bg-green-600 hover:bg-green-700" onClick={handleContactAgent}>
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    WhatsApp Agent
+                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    You'll be connected via WhatsApp to discuss this property.
                   </div>
                 </div>
               </div>

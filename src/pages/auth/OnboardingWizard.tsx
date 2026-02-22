@@ -66,7 +66,7 @@ function OnboardingWizard() {
         <div className="mt-4">
           <a
             className="inline-block px-4 py-2 bg-blue-600 text-white rounded"
-            href="/dashboard"
+            href="/post-login"
           >
             Finish
           </a>

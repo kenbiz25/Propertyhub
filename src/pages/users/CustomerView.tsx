@@ -178,7 +178,7 @@ export default function CustomerView() {
           </button>
 
           <button
-            onClick={() => navigate("/account/favorites")}
+            onClick={() => navigate("/favorites")}
             className="glass-card rounded-2xl p-5 flex items-center justify-between hover-lift focus:ring-2 focus:ring-primary"
           >
             <div className="flex items-center gap-3">

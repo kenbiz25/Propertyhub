@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import PropertyActionsDropdown, {
   ActionsRow,
 } from "@/components/dashboard/PropertyActionsDropdown";
-import { Pencil } from "lucide-react";
+import { Pencil, PauseCircle, PlayCircle, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useSetPropertyStatus } from "@/features/properties/hooks";
 
 type PropertyCardProps = {
   property: {
@@ -18,27 +20,52 @@ type PropertyCardProps = {
     location: string;
     price: string;        // e.g. "KES 120,000"
     status: string;       // "Published" | "Draft" | "Archived" or similar
+    statusKey?: "published" | "draft" | "archived";
     views: number;
     inquiries: number;
     image: string;        // thumbnail URL
   };
+  boostHref?: string;
   onEdit?: (propertyId: string) => void;
   onDelete?: (propertyId: string) => Promise<void> | void;
   onDuplicate?: (propertyId: string) => Promise<void> | void;
   onArchive?: (propertyId: string) => Promise<void> | void;
+  onPublish?: (propertyId: string) => Promise<void> | void;
+  onPause?: (propertyId: string) => Promise<void> | void;
   onView?: (propertyId: string) => void;
   onAfterAction?: () => void; // e.g., refresh list
 };
 
 export default function PropertyCard({
   property,
+  boostHref,
   onEdit,
   onDelete,
   onDuplicate,
   onArchive,
+  onPublish,
+  onPause,
   onView,
   onAfterAction,
 }: PropertyCardProps) {
+  const statusMutation = useSetPropertyStatus();
+  const showActions =
+    !!boostHref ||
+    !!onEdit ||
+    !!onDelete ||
+    !!onPublish ||
+    !!onPause ||
+    !!onView ||
+    !!onDuplicate ||
+    !!onArchive;
+  const statusKey =
+    property.statusKey ??
+    (property.status || "").toLowerCase().includes("publish")
+      ? "published"
+      : (property.status || "").toLowerCase().includes("draft")
+      ? "draft"
+      : "archived";
+
   const statusClass =
     property.status === "Published"
       ? "bg-green-600 text-white"
@@ -47,6 +74,16 @@ export default function PropertyCard({
       : "bg-orange-600 text-white"; // Archived → orange per your theme
 
   const actionsRow: ActionsRow = { id: property.id, title: property.title };
+
+  const handlePublish = async () => {
+    if (onPublish) return onPublish(property.id);
+    await statusMutation.mutateAsync({ id: property.id, status: "published" });
+  };
+
+  const handlePause = async () => {
+    if (onPause) return onPause(property.id);
+    await statusMutation.mutateAsync({ id: property.id, status: "draft" });
+  };
 
   return (
     <Card className="relative bg-gray-900 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border border-gray-800">
@@ -58,14 +95,16 @@ export default function PropertyCard({
         </div>
 
         {/* Shared dropdown so actions match the table */}
-        <PropertyActionsDropdown
-          row={actionsRow}
-          onEdit={() => onEdit?.(property.id)}
-          onDuplicate={() => onDuplicate?.(property.id)}
-          onArchive={() => onArchive?.(property.id)}
-          onDelete={() => onDelete?.(property.id)}
-          onAfterAction={onAfterAction}
-        />
+        {showActions && (
+          <PropertyActionsDropdown
+            row={actionsRow}
+            onEdit={() => onEdit?.(property.id)}
+            onDuplicate={() => onDuplicate?.(property.id)}
+            onArchive={() => onArchive?.(property.id)}
+            onDelete={() => onDelete?.(property.id)}
+            onAfterAction={onAfterAction}
+          />
+        )}
       </CardHeader>
 
       {/* Thumbnail + metrics */}
@@ -94,31 +133,68 @@ export default function PropertyCard({
       </CardContent>
 
       {/* Status chip + inline Edit/View buttons */}
-      <CardFooter className="px-4 py-3 flex items-center justify-between">
-        <span className={`px-2 py-1 rounded text-xs ${statusClass}`}>
-          {property.status}
-        </span>
+      {showActions && (
+        <CardFooter className="px-4 py-3 flex items-center justify-between">
+          <span className={`px-2 py-1 rounded text-xs ${statusClass}`}>
+            {property.status}
+          </span>
 
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={() => onEdit?.(property.id)}
-          >
-            <Pencil className="w-3 h-3 mr-1" />
-            Edit
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            className="text-xs"
-            onClick={() => onView?.(property.id)}
-          >
-            View
-          </Button>
-        </div>
-      </CardFooter>
+          <div className="flex gap-2">
+            {boostHref && (
+              <Button variant="outline" size="sm" className="text-xs" asChild>
+                <Link to={boostHref}>Boost</Link>
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => onEdit?.(property.id)}
+            >
+              <Pencil className="w-3 h-3 mr-1" />
+              Edit
+            </Button>
+            {statusKey === "published" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={handlePause}
+              >
+                <PauseCircle className="w-3 h-3 mr-1" />
+                Pause
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="sm"
+                className="text-xs"
+                onClick={handlePublish}
+              >
+                <PlayCircle className="w-3 h-3 mr-1" />
+                Live
+              </Button>
+            )}
+            <Button
+              variant="destructive"
+              size="sm"
+              className="text-xs"
+              onClick={() => onDelete?.(property.id)}
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              Delete
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              className="text-xs"
+              onClick={() => onView?.(property.id)}
+            >
+              View
+            </Button>
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 }

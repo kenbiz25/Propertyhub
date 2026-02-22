@@ -1,6 +1,6 @@
-# 🏡 Househunter Platform
+# 🏡 Kenya Properties Platform
 
-Househunter is a modern, full-stack real estate platform built for search, leasing, agent management, and monetization.  
+Kenya Properties is a modern, full-stack real estate platform built for search, leasing, agent management, and monetization.  
 It brings buyers, renters, agents, and administrators into a single scalable system with subscriptions, promotions, and real-time communication.
 
 Production-ready • Monetized • Role-based • Secure
@@ -9,7 +9,7 @@ Production-ready • Monetized • Role-based • Secure
 
 ## 🚀 Overview
 
-Househunter enables:
+Kenya Properties enables:
 - Property discovery with advanced search
 - Agent-managed listings and promotions
 - Subscription-based monetization
@@ -158,8 +158,8 @@ Firebase Storage for media
 Centralized role security in Firestore Rules
 
 ⚙️ Setup & Installation
-git clone https://github.com/your-org/househunter.git
-cd househunter
+git clone https://github.com/your-org/kenya-properties.git
+cd kenya-properties
 npm install
 npm run dev
 

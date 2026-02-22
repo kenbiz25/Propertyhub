@@ -30,8 +30,8 @@ export const roleSidebar: Record<Role, SidebarItem[]> = {
   agent: [
     { label: "Overview",     path: "/agent",               icon: "Home",         roles: ["agent", "admin", "superadmin"] },
     { label: "Properties",   path: "/agent/properties",    icon: "Building2",    roles: ["agent", "admin", "superadmin"] },
-    { label: "Messages",     path: "/agent/messages",      icon: "MessageSquare",roles: ["agent", "admin", "superadmin"] },
     { label: "Add Property", path: "/agent/list-property", icon: "Plus",         roles: ["agent", "admin", "superadmin"] },
+    { label: "Boost Pricing", path: "/agent/pricing",      icon: "BadgeDollarSign", roles: ["agent", "admin", "superadmin"] },
     { label: "Settings",     path: "/agent/settings",      icon: "Settings",     roles: ["agent", "admin", "superadmin"] },
 
     // Show KYC only while not verified (for agents)
@@ -65,14 +65,11 @@ export const roleSidebar: Record<Role, SidebarItem[]> = {
   ],
 
   admin: [
-    { label: "Admin Console", path: "/admin",              icon: "LayoutDashboard", roles: ["admin", "superadmin"] },
-    // If you have an admin tab for promotions inside console, keep a single link
-    // Deep link routes like /admin/promotions/:id should not appear in the sidebar
+    { label: "Admin Console", path: "/admin", icon: "LayoutDashboard", roles: ["admin", "superadmin"] },
   ],
 
   superadmin: [
-    // For now superadmin uses the same Admin Console
-    { label: "Admin Console", path: "/admin",              icon: "LayoutDashboard", roles: ["superadmin"] },
+    { label: "Admin Console", path: "/admin", icon: "LayoutDashboard", roles: ["superadmin"] },
   ],
 
   customer: [

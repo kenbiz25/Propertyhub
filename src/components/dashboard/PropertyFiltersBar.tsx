@@ -4,14 +4,30 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { COUNTRIES } from "@/lib/constants/countries";
+import { useCities } from "@/hooks/useCities";
 
 export default function PropertyFiltersBar({ filters, onChange }:{filters:any; onChange:(f:any)=>void}) {
+  const { data: cityOptions = [], isLoading: citiesLoading } = useCities(filters.country);
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3">
       <Input placeholder="Search…" value={filters.q ?? ""} onChange={e => onChange({ ...filters, q: e.target.value })} />
-      <Select value={filters.country ?? ""} onValueChange={(v)=>onChange({ ...filters, country: v })}>
+      <Select value={filters.country ?? ""} onValueChange={(v)=>onChange({ ...filters, country: v, city: "" })}>
         <SelectTrigger><SelectValue placeholder="Country" /></SelectTrigger>
         <SelectContent>{COUNTRIES.map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+      </Select>
+      <Select
+        value={filters.city ?? ""}
+        onValueChange={(v)=>onChange({ ...filters, city: v })}
+        disabled={cityOptions.length === 0}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder={citiesLoading ? "Loading cities…" : cityOptions.length === 0 ? "Select country first" : "City"} />
+        </SelectTrigger>
+        <SelectContent>
+          {cityOptions.map((c)=>(
+            <SelectItem key={c} value={c}>{c}</SelectItem>
+          ))}
+        </SelectContent>
       </Select>
       <Select value={filters.listing_type ?? ""} onValueChange={(v)=>onChange({ ...filters, listing_type: v as any })}>
         <SelectTrigger><SelectValue placeholder="Rent/Sale" /></SelectTrigger>

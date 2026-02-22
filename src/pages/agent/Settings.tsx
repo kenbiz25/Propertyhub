@@ -1,7 +1,7 @@
 
 // src/pages/agent/DashboardSettings.tsx
 import { useEffect, useRef, useState } from "react";
-import { User, Mail, Phone, MapPin, Building2, Save } from "lucide-react";
+import { User, Mail, Phone, MapPin, Building2, Save, Facebook, Instagram, Twitter, Music2, MessageCircle } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,11 @@ export default function DashboardSettings() {
     bio: "",
     location: "",
     avatar_url: "",
+    facebook: "",
+    instagram: "",
+    twitter: "",
+    whatsapp: "",
+    tiktok: "",
   });
 
   const [notifications, setNotifications] = useState({
@@ -53,6 +58,11 @@ export default function DashboardSettings() {
           bio: data.bio ?? "",
           location: data.location ?? "",
           avatar_url: data.avatar_url ?? "",
+          facebook: data?.socials?.facebook ?? data?.facebook ?? "",
+          instagram: data?.socials?.instagram ?? data?.instagram ?? "",
+          twitter: data?.socials?.twitter ?? data?.twitter ?? "",
+          whatsapp: data?.socials?.whatsapp ?? data?.whatsapp ?? "",
+          tiktok: data?.socials?.tiktok ?? data?.tiktok ?? "",
         }));
         setNotifications((prev) => ({
           ...prev,
@@ -79,6 +89,13 @@ export default function DashboardSettings() {
         bio: profile.bio,
         location: profile.location,
         avatar_url: profile.avatar_url,
+        socials: {
+          facebook: profile.facebook,
+          instagram: profile.instagram,
+          twitter: profile.twitter,
+          whatsapp: profile.whatsapp,
+          tiktok: profile.tiktok,
+        },
       });
       toast.success("Profile updated successfully!");
     } catch (err: any) {
@@ -142,6 +159,17 @@ export default function DashboardSettings() {
               <Textarea id="bio" name="bio" value={profile.bio} onChange={handleProfileChange} className="mt-2" rows={4} />
             </div>
 
+            <div>
+              <h3 className="font-display text-lg font-semibold mb-3">Social Links</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputField icon={<Facebook />} id="facebook" name="facebook" value={profile.facebook} onChange={handleProfileChange} label="Facebook" placeholder="@username or URL" />
+                <InputField icon={<Instagram />} id="instagram" name="instagram" value={profile.instagram} onChange={handleProfileChange} label="Instagram" placeholder="@username or URL" />
+                <InputField icon={<Twitter />} id="twitter" name="twitter" value={profile.twitter} onChange={handleProfileChange} label="Twitter" placeholder="@username or URL" />
+                <InputField icon={<MessageCircle />} id="whatsapp" name="whatsapp" value={profile.whatsapp} onChange={handleProfileChange} label="WhatsApp" placeholder="+2547... or URL" />
+                <InputField icon={<Music2 />} id="tiktok" name="tiktok" value={profile.tiktok} onChange={handleProfileChange} label="TikTok" placeholder="@username or URL" />
+              </div>
+            </div>
+
             <Button onClick={handleSaveProfile}>
               <Save className="w-4 h-4 mr-2" />
               Save Changes
@@ -180,13 +208,13 @@ export default function DashboardSettings() {
   );
 }
 
-function InputField({ icon, id, name, value, onChange, label, disabled = false }: any) {
+function InputField({ icon, id, name, value, onChange, label, disabled = false, placeholder }: any) {
   return (
     <div>
       <Label htmlFor={id}>{label}</Label>
       <div className="relative mt-2">
         {icon}
-        <Input id={id} name={name} value={value} onChange={onChange} className="pl-10" disabled={disabled} />
+        <Input id={id} name={name} value={value} onChange={onChange} className="pl-10" disabled={disabled} placeholder={placeholder} />
       </div>
     </div>
   );
@@ -197,7 +225,7 @@ function PrefRow({ title, desc, checked, onChange }: any) {
     <div className="flex items-center justify-between">
       <div>
         <p className="font-medium">{title}</p>
-        <p className="text-sm text-mutedesc}</p>
+        <p className="text-sm text-muted-foreground">{desc}</p>
       </div>
       <Switch checked={checked} onCheckedChange={onChange} />
     </div>

@@ -9,6 +9,7 @@ import {
   orderBy,
   limit,
   getDocs,
+  documentId,
 } from "firebase/firestore";
 import { db } from "@/lib/firebaseClient";
 import { MapPin, Bed, Bath, Square, Heart, ArrowRight, Star } from "lucide-react";
@@ -100,13 +101,13 @@ const PropertyCard = ({ property }: { property: UIProperty }) => {
           {property.title}
         </h3>
 
-        <div className="flex items-center gap-1 text-muted-foreground text-sm mb-4">
+        <div className="flex items-center gap-1 text-muted-foreground text-sm mb-4 line-clamp-1">
           <MapPin className="w-4 h-4 text-primary" />
           {property.address}
         </div>
 
         {/* Features */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
           {property.bedrooms > 0 && (
             <div className="flex items-center gap-1">
               <Bed className="w-4 h-4" />
@@ -128,100 +129,6 @@ const PropertyCard = ({ property }: { property: UIProperty }) => {
 };
 
 // ---------- Firestore fetch & mapping ----------
-
-// If no live data yet, we render your original mock to preserve UX.
-const mockFeatured: UIProperty[] = [
-  {
-    id: "1",
-    title: "Modern Penthouse in Westlands",
-    price: 45000000,
-    currency: "KES",
-    type: "sale",
-    city: "Nairobi",
-    address: "Westlands, Nairobi",
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 280,
-    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80",
-    isPromoted: true,
-    isVerified: true,
-  },
-  {
-    id: "2",
-    title: "Cozy 2BR Apartment in Kilimani",
-    price: 85000,
-    currency: "KES",
-    type: "rent",
-    city: "Nairobi",
-    address: "Kilimani, Nairobi",
-    bedrooms: 2,
-    bathrooms: 2,
-    area: 120,
-    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80",
-    isPromoted: false,
-    isVerified: true,
-  },
-  {
-    id: "3",
-    title: "Beachfront Villa in Nyali",
-    price: 120000000,
-    currency: "KES",
-    type: "sale",
-    city: "Mombasa",
-    address: "Nyali, Mombasa",
-    bedrooms: 5,
-    bathrooms: 4,
-    area: 450,
-    image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80",
-    isPromoted: true,
-    isVerified: true,
-  },
-  {
-    id: "4",
-    title: "Commercial Space in CBD",
-    price: 250000,
-    currency: "KES",
-    type: "lease",
-    city: "Nairobi",
-    address: "CBD, Nairobi",
-    bedrooms: 0,
-    bathrooms: 2,
-    area: 500,
-    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80",
-    isPromoted: false,
-    isVerified: true,
-  },
-  {
-    id: "5",
-    title: "Family Home in Karen",
-    price: 75000000,
-    currency: "KES",
-    type: "sale",
-    city: "Nairobi",
-    address: "Karen, Nairobi",
-    bedrooms: 5,
-    bathrooms: 4,
-    area: 380,
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
-    isPromoted: true,
-    isVerified: true,
-  },
-  {
-    id: "6",
-    title: "Studio Apartment in Lavington",
-    price: 45000,
-    currency: "KES",
-    type: "rent",
-    city: "Nairobi",
-    address: "Lavington, Nairobi",
-    bedrooms: 1,
-    bathrooms: 1,
-    area: 55,
-    image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80",
-    isPromoted: false,
-    isVerified: true,
-  },
-];
 
 // Map Firestore document → UI shape, preserving your design fields.
 function toUIProperty(d: any, id: string): UIProperty {
@@ -248,28 +155,37 @@ function toUIProperty(d: any, id: string): UIProperty {
 }
 
 async function fetchFeatured(): Promise<UIProperty[]> {
-  const base = [where("published", "==", true), where("featured", "==", true)];
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const q = fsQuery(
+    collection(db, "view_events"),
+    where("created_at", ">=", cutoff),
+    orderBy("created_at", "desc"),
+    limit(500)
+  );
+  const snap = await getDocs(q);
 
-  // Try: newest first
-  try {
-    const q1 = fsQuery(
-      collection(db, "properties"),
-      ...base,
-      orderBy("created_at", "desc"),
-      limit(6)
-    );
-    const s1 = await getDocs(q1);
-    const items1 = s1.docs.map((doc) => toUIProperty(doc.data(), doc.id));
-    if (items1.length > 0) return items1;
-  } catch {
-    // If index/field not ready, fall through to unsorted query
-  }
+  const counts = new Map<string, number>();
+  snap.docs.forEach((d) => {
+    const pid = d.data()?.property_id;
+    if (!pid) return;
+    counts.set(pid, (counts.get(pid) ?? 0) + 1);
+  });
 
-  // Fallback: unsorted
-  const q2 = fsQuery(collection(db, "properties"), ...base, limit(6));
-  const s2 = await getDocs(q2);
-  const items2 = s2.docs.map((doc) => toUIProperty(doc.data(), doc.id));
-  return items2;
+  const topIds = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([id]) => id);
+
+  if (topIds.length === 0) return [];
+
+  const propsQ = fsQuery(
+    collection(db, "properties"),
+    where(documentId(), "in", topIds),
+    where("status", "==", "published")
+  );
+  const propsSnap = await getDocs(propsQ);
+
+  return propsSnap.docs.map((d) => toUIProperty(d.data(), d.id));
 }
 
 // ---------- Component ----------
@@ -324,7 +240,7 @@ const FeaturedListings = () => {
     console.error("[FeaturedListings] Error:", error);
   }
 
-  const items = (data?.length ?? 0) > 0 ? (data as UIProperty[]) : mockFeatured;
+  const items = (data?.length ?? 0) > 0 ? (data as UIProperty[]) : [];
 
   return (
     <section className="py-20 bg-background">
@@ -348,11 +264,28 @@ const FeaturedListings = () => {
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {items.map((property) => (
-            <PropertyCard key={property.id} property={property} />
-          ))}
-        </div>
+        {items.length === 0 ? (
+          <div className="glass-card rounded-2xl p-10 text-center">
+            <h3 className="font-display text-xl font-semibold mb-2">No featured listings yet</h3>
+            <p className="text-muted-foreground mb-6">
+              Be the first to feature your property and reach thousands of buyers.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild>
+                <Link to="/list-property">List a Property</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/listings">Browse All</Link>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {items.map((property) => (
+              <PropertyCard key={property.id} property={property} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

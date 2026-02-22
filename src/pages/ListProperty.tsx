@@ -1,8 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Home, CheckCircle, ArrowRight, Building2, Users, TrendingUp, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { auth } from "@/lib/firebaseClient";
 import Navbar from "@/components/layouts/Navbar";
 import Footer from "@/components/layouts/Footer";
+import SEO from "@/components/SEO";
 
 const plans = [
   {
@@ -73,8 +75,29 @@ const benefits = [
 ];
 
 const ListProperty = () => {
+  const navigate = useNavigate();
+
+  const handleStartListing = () => {
+    if (auth.currentUser) {
+      navigate("/agent/list-property");
+    } else {
+      navigate("/auth?role=agent&from=/agent/list-property");
+    }
+  };
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="List Your Property for Free | Kenya Properties"
+        description="List your house, apartment, land, or commercial property for free on Kenya's leading real estate platform. Reach thousands of verified buyers and renters across Kenya."
+        canonical="/list-property"
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": "List Your Property for Free in Kenya",
+          "description": "Free property listing for agents, landlords, and developers across Kenya.",
+          "url": "https://kenyaproperties.co.ke/list-property",
+        }}
+      />
       <Navbar />
 
       <main className="pt-16">
@@ -92,15 +115,13 @@ const ListProperty = () => {
                 <span className="text-gradient"> Faster</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8">
-                Join thousands of property owners and agents who trust Househunter 
+                Join thousands of property owners and agents who trust Kenya Properties 
                 to connect them with qualified buyers and tenants across Kenya.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button asChild size="lg" variant="hero">
-                  <Link to="/auth">
-                    Start Listing
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Link>
+                <Button size="lg" variant="hero" onClick={handleStartListing}>
+                  Start Listing
+                  <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
                 <Button asChild size="lg" variant="outline">
                   <Link to="/about">Learn More</Link>
@@ -191,7 +212,7 @@ const ListProperty = () => {
                     className="w-full"
                     variant={plan.popular ? "default" : "outline"}
                   >
-                    <Link to="/auth">{plan.cta}</Link>
+                    <Link to="/auth?role=agent&from=/agent/list-property">{plan.cta}</Link>
                   </Button>
                 </div>
               ))}
@@ -209,11 +230,9 @@ const ListProperty = () => {
               <p className="text-muted-foreground mb-8">
                 Create your account today and start listing your properties in minutes.
               </p>
-              <Button asChild size="lg" variant="hero">
-                <Link to="/auth">
-                  Create Free Account
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Link>
+              <Button size="lg" variant="hero" onClick={handleStartListing}>
+                Create Free Account
+                <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </div>
           </div>

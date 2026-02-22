@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "@/lib/firebaseClient";
-import { getRedirectResult, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
+import { getRedirectResult } from "firebase/auth";
 
 export default function OAuthCallback() {
   const navigate = useNavigate();

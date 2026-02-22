@@ -1,9 +1,11 @@
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import Navbar from "@/components/layouts/Navbar";
 import Footer from "@/components/layouts/Footer";
 import { Button } from "@/components/ui/button";
+import { auth, db } from "@/lib/firebaseClient";
+import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 type SubRow = {
   id: string;
@@ -16,19 +18,21 @@ type SubRow = {
 export default function Billing() {
   const [sub, setSub] = useState<SubRow | null>(null);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("id,plan,status,current_period_end,stripe_customer_id")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!error) setSub(data ?? null);
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+      const q = query(
+        collection(db, "subscriptions"),
+        where("user_id", "==", uid),
+        orderBy("created_at", "desc"),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      const row = snap.docs[0]?.data() as SubRow | undefined;
+      setSub(row ?? null);
     })();
   }, []);
 
@@ -36,19 +40,7 @@ export default function Billing() {
     if (loading) return;
     setLoading(true);
     try {
-      // Edge Function to create portal session
-      const endpoint = `${import.meta.env.VITE_EDGE_BASE_URL}/create-portal-session`;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const resp = await fetch(endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ user_id: user.id }),
-      });
-      if (!resp.ok) throw new Error("Failed to start portal session");
-      const { url } = await resp.json();
-      window.location.href = url;
+      navigate("/subscription/portal");
     } catch (e: any) {
       alert(e?.message ?? "Could not open billing portal.");
     } finally {
@@ -56,9 +48,8 @@ export default function Billing() {
     }
   };
 
-  const nextRenewal = sub?.current_period_end
-    ? new Date(sub.current_period_end).toLocaleDateString("en-KE")
-    : "—";
+  const endDate = (sub as any)?.current_period_end?.toDate?.() ?? sub?.current_period_end;
+  const nextRenewal = endDate ? new Date(endDate).toLocaleDateString("en-KE") : "—";
 
   return (
     <div className="min-h-screen bg-background">

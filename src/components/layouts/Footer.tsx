@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Home, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import { Home, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -13,23 +13,47 @@ const Footer = () => {
                 <Home className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="font-display font-bold text-xl">
-                House<span className="text-primary">hunter</span>
+                Kenya <span className="text-primary">Properties</span>
               </span>
             </Link>
             <p className="text-muted-foreground text-sm">
               Kenya's premier real estate marketplace. Find your dream home across Africa with verified listings and trusted agents.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a
+                href="https://www.facebook.com/kenyaproperties"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Facebook"
+              >
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a
+                href="https://x.com/kenyaproperties"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="X (formerly Twitter)"
+              >
                 <Twitter className="w-5 h-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a
+                href="https://www.instagram.com/kenyaproperties"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Instagram"
+              >
                 <Instagram className="w-5 h-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a
+                href="https://www.linkedin.com/company/kenyaproperties"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="LinkedIn"
+              >
                 <Linkedin className="w-5 h-5" />
               </a>
             </div>
@@ -99,23 +123,20 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Support */}
           <div>
-            <h3 className="font-display font-semibold text-lg mb-4">Contact Us</h3>
-            <ul className="space-y-3">
-              <li className="flex items-center gap-3 text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4 text-primary" />
-                Westlands, Nairobi, Kenya
-              </li>
-              <li className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Phone className="w-4 h-4 text-primary" />
-                +254 700 000 000
-              </li>
-              <li className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Mail className="w-4 h-4 text-primary" />
-                hello@househunter.co.ke
-              </li>
-            </ul>
+            <h3 className="font-display font-semibold text-lg mb-4">Support</h3>
+            <p className="text-sm text-muted-foreground">
+              For privacy, all support is handled through in-app messaging.
+            </p>
+            <div className="mt-3">
+              <Link
+                to="/messages"
+                className="text-sm text-primary hover:text-primary/90"
+              >
+                Open Messages
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -123,7 +144,7 @@ const Footer = () => {
         <div className="mt-12 pt-8 border-t border-border">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2026 Househunter. All rights reserved.
+              © 2026 Kenya Properties. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm">
               <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
@@ -135,7 +156,7 @@ const Footer = () => {
             </div>
           </div>
           <p className="mt-4 text-xs text-muted-foreground text-center md:text-left">
-            Househunter.com is a marketplace. Buyers and tenants must independently verify property ownership,
+            KenyaProperties.co.ke is a marketplace. Buyers and tenants must independently verify property ownership,
             conduct title searches, and comply with local laws and county planning regulations.
           </p>
         </div>

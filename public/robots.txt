@@ -1,14 +1,60 @@
+User-agent: *
+Allow: /
+Allow: /listings
+Allow: /listing/
+Allow: /agents
+Allow: /agents/
+Allow: /about
+Allow: /mortgage-calculator
+Allow: /list-property
+Allow: /privacy
+Allow: /terms
+Allow: /support
+Allow: /reviews
+Allow: /search
+
+# Block private/authenticated routes
+Disallow: /auth
+Disallow: /oauth/
+Disallow: /onboarding
+Disallow: /verify-email
+Disallow: /update-password
+Disallow: /reauth
+Disallow: /post-login
+Disallow: /agent/
+Disallow: /admin/
+Disallow: /customer/
+Disallow: /account/
+Disallow: /profile
+Disallow: /favorites
+Disallow: /saved-searches
+Disallow: /messages
+Disallow: /notifications
+Disallow: /subscription/
+Disallow: /report
+Disallow: /delete-account
+Disallow: /unauthorized
+
+Sitemap: https://kenyaproperties.co.ke/sitemap.xml
+
 User-agent: Googlebot
 Allow: /
+Disallow: /agent/
+Disallow: /admin/
+Disallow: /customer/
+Disallow: /account/
+Disallow: /subscription/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /agent/
+Disallow: /admin/
+Disallow: /customer/
+Disallow: /account/
+Disallow: /subscription/
 
 User-agent: Twitterbot
 Allow: /
 
 User-agent: facebookexternalhit
-Allow: /
-
-User-agent: *
 Allow: /

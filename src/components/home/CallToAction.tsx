@@ -24,7 +24,7 @@ const CallToAction = () => {
           </h2>
           
           <p className="text-muted-foreground text-lg max-w-xl mx-auto mb-8">
-            Join thousands of property owners and agents who trust Househunter 
+            Join thousands of property owners and agents who trust Kenya Properties 
             to connect them with serious buyers and tenants.
           </p>
 
@@ -35,10 +35,10 @@ const CallToAction = () => {
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </Button>
-            <Button variant="glass" size="xl" asChild>
-              <Link to="/pricing">
-                View Pricing Plans
-              </Link>
+              <Button variant="glass" size="xl" asChild>
+                <Link to="/list-property">
+                  View Pricing Plans
+                </Link>
             </Button>
           </div>
 

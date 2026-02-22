@@ -15,8 +15,8 @@ export default function SubscribeCancel() {
             Your subscription wasn’t completed. You can retry anytime.
           </p>
           <div className="flex justify-center gap-3">
-            <Button asChild variant="outline"><Link to="/pricing">Back to Pricing</Link></Button>
-            <Button asChild><Link to="/billing">Go to Billing</Link></Button>
+            <Button asChild variant="outline"><Link to="/list-property">Back to Pricing</Link></Button>
+            <Button asChild><Link to="/subscription/billing">Go to Billing</Link></Button>
           </div>
         </div>
       </main>

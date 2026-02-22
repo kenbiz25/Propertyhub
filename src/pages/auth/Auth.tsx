@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { COUNTRIES } from "@/lib/constants/countries";
+import { useCities } from "@/hooks/useCities";
 
 // ⬇️ Firebase imports
 import { auth, db } from "@/lib/firebaseClient";
@@ -26,23 +28,8 @@ import {
   sendPasswordResetEmail,
   signInWithPopup,
   GoogleAuthProvider,
-  GithubAuthProvider,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-
-// Minimal country list (expand as needed)
-const COUNTRIES = [
-  "Kenya",
-  "Uganda",
-  "Tanzania",
-  "Rwanda",
-  "Burundi",
-  "Ethiopia",
-  "Ghana",
-  "Nigeria",
-  "South Africa",
-  "Other",
-];
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -54,7 +41,10 @@ const Auth = () => {
     password: "",
     fullName: "",
     country: "Kenya",
+    city: "",
   });
+
+  const { data: cityOptions = [], isLoading: citiesLoading } = useCities(formData.country);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -80,35 +70,48 @@ const Auth = () => {
     }
   }, [location.search]);
 
+  const roleParam = new URLSearchParams(location.search).get("role");
+  const desiredRole = roleParam === "agent" ? "agent" : "customer";
+
   // ✅ Forgot password handler (Firebase)
   const sendResetEmail = async () => {
-    if (!formData.email) {
+    const email = formData.email.trim();
+    if (!email) {
       toast.info("Enter your email first");
       return;
     }
     try {
       // Optionally add ActionCodeSettings to redirect back to your site:
       // const actionCodeSettings = { url: `${window.location.origin}/auth` };
-      await sendPasswordResetEmail(auth, formData.email /*, actionCodeSettings */);
+      await sendPasswordResetEmail(auth, email /*, actionCodeSettings */);
       toast.success("Password reset email sent. Check your inbox.");
     } catch (err: any) {
-      toast.error(err?.message ?? "Could not send reset email");
+      const code = err?.code as string | undefined;
+      if (code === "auth/user-not-found") {
+        toast.error("No account found for that email.");
+      } else if (code === "auth/invalid-email") {
+        toast.error("Please enter a valid email address.");
+      } else {
+        toast.error("Could not send reset email.");
+      }
     }
   };
 
   // ✅ Sign up ➜ create user in Firebase Auth ➜ create Firestore profile ➜ send verification
   const handleEmailSignUp = async () => {
-    const { email, password, fullName, country } = formData;
+    const { password, fullName, country, city } = formData;
+    const email = formData.email.trim();
     const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-    // Upsert profile document keyed by uid; default role = 'customer'
+    // Upsert profile document keyed by uid
     try {
       await setDoc(
         doc(db, "profiles", cred.user.uid),
         {
           full_name: fullName,
           country,
-          role: "customer",
+          city: city || null,
+          role: desiredRole,
           kyc_verified: false,
           subscription_active: false,
           created_at: new Date().toISOString(),
@@ -117,6 +120,26 @@ const Auth = () => {
       );
     } catch (e: any) {
       console.warn("profiles upsert warning:", e?.message);
+    }
+
+    // Ensure primary users doc exists for app role-based routing
+    try {
+      await setDoc(
+        doc(db, "users", cred.user.uid),
+        {
+          email,
+          full_name: fullName,
+          country,
+          city: city || null,
+          role: desiredRole,
+          kyc_verified: false,
+          subscription_active: false,
+          created_at: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (e: any) {
+      console.warn("users upsert warning:", e?.message);
     }
 
     // Send email verification, sign out to enforce verification before full access (optional)
@@ -133,7 +156,8 @@ const Auth = () => {
 
   // ✅ Sign in ➜ navigate to post-login
   const handleEmailSignIn = async () => {
-    const { email, password } = formData;
+    const { password } = formData;
+    const email = formData.email.trim();
     const cred = await signInWithEmailAndPassword(auth, email, password);
 
     // Optional: warn if email not verified
@@ -159,25 +183,35 @@ const Auth = () => {
         await handleEmailSignIn();
       }
     } catch (err: any) {
-      toast.error(err?.message ?? "Authentication failed");
+      const code = err?.code as string | undefined;
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
+        toast.error("Wrong email or password.");
+      } else if (code === "auth/user-not-found") {
+        toast.error("No account found for that email.");
+      } else if (code === "auth/invalid-email") {
+        toast.error("Please enter a valid email address.");
+      } else if (code === "auth/user-disabled") {
+        toast.error("This account has been disabled.");
+      } else if (code === "auth/too-many-requests") {
+        toast.error("Too many attempts. Try again later.");
+      } else {
+        toast.error("Authentication failed.");
+      }
       console.error("Auth error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- OAuth: Google & GitHub ---
+  // --- OAuth: Google ---
   // Uses signInWithPopup for simplicity. If you need full-page redirect, switch to signInWithRedirect.
-  const signInWithProvider = async (providerName: "google" | "github") => {
+  const signInWithProvider = async (providerName: "google") => {
     if (loading) return;
     setLoading(true);
 
-    const provider =
-      providerName === "google" ? new GoogleAuthProvider() : new GithubAuthProvider();
+    const provider = new GoogleAuthProvider();
 
     // Optional scopes:
-    // if (providerName === "github") provider.addScope("read:user");
-
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
@@ -188,7 +222,21 @@ const Auth = () => {
         {
           full_name: user.displayName ?? "",
           country: formData.country || "Other",
-          role: "customer",
+          role: desiredRole,
+          kyc_verified: false,
+          subscription_active: false,
+          created_at: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          email: user.email ?? "",
+          full_name: user.displayName ?? "",
+          country: formData.country || "Other",
+          role: desiredRole,
           kyc_verified: false,
           subscription_active: false,
           created_at: new Date().toISOString(),
@@ -206,12 +254,11 @@ const Auth = () => {
     }
   };
 
-  // (Optional) If you want to auto-redirect signed-in users away from /auth:
+  // Auto-redirect signed-in users away from /auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // If already logged in and you prefer skipping the auth page:
-        // navigate("/post-login", { replace: true, state: { from } });
+        navigate("/post-login", { replace: true, state: { from } });
       }
     });
     return () => unsub();
@@ -228,7 +275,7 @@ const Auth = () => {
               <Home className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="font-display font-bold text-xl">
-              House<span className="text-primary">hunter</span>
+              Kenya <span className="text-primary">Properties</span>
             </span>
           </Link>
 
@@ -239,7 +286,7 @@ const Auth = () => {
             </h1>
             <p className="text-muted-foreground">
               {isSignUp
-                ? "Start your property journey with Househunter"
+                ? "Start your property journey with Kenya Properties"
                 : "Sign in to access your account"}
             </p>
           </div>
@@ -271,13 +318,34 @@ const Auth = () => {
                   <Label>Country</Label>
                   <Select
                     value={formData.country}
-                    onValueChange={(v) => setFormData({ ...formData, country: v })}
+                    onValueChange={(v) => setFormData({ ...formData, country: v, city: "" })}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
                     <SelectContent className="max-h-64">
                       {COUNTRIES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* City dropdown (depends on country) */}
+                <div className="space-y-2">
+                  <Label>City</Label>
+                  <Select
+                    value={formData.city}
+                    onValueChange={(v) => setFormData({ ...formData, city: v })}
+                    disabled={cityOptions.length === 0}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={citiesLoading ? "Loading cities…" : cityOptions.length === 0 ? "Select country first" : "Select city"} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {cityOptions.map((c) => (
                         <SelectItem key={c} value={c}>
                           {c}
                         </SelectItem>
@@ -368,7 +436,7 @@ const Auth = () => {
           </div>
 
           {/* Social Buttons */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <Button
               variant="outline"
               type="button"
@@ -395,19 +463,6 @@ const Auth = () => {
                 />
               </svg>
               Google
-            </Button>
-
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => signInWithProvider("github")}
-              disabled={loading}
-            >
-              {/* GitHub */}
-              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.205 11.387.6.111.82-.261.82-.58 0-.287-.01-1.046-.016-2.054-3.338.726-4.042-1.61-4.042-1.61-.546-1.386-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.809 1.304 3.495.997.108-.775.418-1.305.761-1.605-2.665-.303-5.466-1.332-5.466-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.523.117-3.176 0 0 1.009-.322 3.31 1.23a11.52 11.52 0 0 1 3.016-.405c1.024.005 2.055.138 3.016.405 2.3-1.552 3.307-1.23 3.307-1.23.655 1.653.243 2.873.119 3.176.77.84 1.234 1.911 1.234 3.221 0 4.61-2.807 5.625-5.479 5.921.43.372.814 1.102.814 2.222 0 1.604-.015 2.894-.015 3.289 0 .321.218.697.826.579C20.565 21.796 24 17.298 24 12c0-6.627-5.373-12-12-12z" />
-              </svg>
-              GitHub
             </Button>
           </div>
 
@@ -441,7 +496,7 @@ const Auth = () => {
           <div className="glass-card rounded-2xl p-6">
             <h2 className="font-display text-2xl font-bold mb-2">Find Your Dream Home</h2>
             <p className="text-muted-foreground">
-              Join thousands of Kenyans who have found their perfect property through Househunter.
+              Join thousands of Kenyans who have found their perfect property through Kenya Properties.
             </p>
             <div className="flex gap-8 mt-4 pt-4 border-t border-border">
               <div>

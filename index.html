@@ -1,42 +1,97 @@
-
 <!doctype html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0"
-    />
-    <title>House Hunter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
 
-    <!-- SEO -->
-    <meta name="description" content="House Hunting made easy" />
-    <meta name="author" content="hunter" />
+    <title>Kenya Properties | Houses, Apartments, Land & Plots for Sale & Rent in Nairobi, Kiambu, Mombasa</title>
 
-    <!-- Open Graph -->
-    <meta property="og:title" content="House Hunter" />
-    <meta property="og:description" content="House Hunting made easy" />
+    <!-- Meta Description -->
+    <meta name="description" content="Discover verified houses for sale & rent in Nairobi, apartments in Westlands/Kilimani, land & plots in Kiambu, Machakos, Ruiru. Free listings for agents & developers – Kenya’s trusted real estate marketplace 2026!" />
+
+    <!-- Keywords -->
+    <meta name="keywords" content="houses for sale Nairobi, apartments for rent Kenya, land for sale Kiambu, plots for sale Ruiru, property for sale Mombasa, real estate Kenya 2026, free property listing Kenya, houses in Westlands, affordable land near Nairobi, property developers Kenya" />
+
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+    <!-- Enhanced E-E-A-T signals -->
+    <meta name="author" content="Keneth | Systems & Strategy | Verified Kenya Real Estate Platform" />
+    <meta name="copyright" content="© 2026 Kenya Properties | All rights reserved" />
+    <meta name="google-adsense-account" content="ca-pub-8787623516632800" />
+
+    <link rel="canonical" href="https://kenyaproperties.co.ke/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <!-- Open Graph: Improved title/desc for higher share CTR; added image:alt-like hint via description -->
+    <meta property="og:title" content="Kenya Properties | Buy, Sell & Rent Houses, Land & Apartments in Kenya 2026" />
+    <meta property="og:description" content="Verified listings: houses for sale Nairobi, apartments to rent Kilimani/Westlands, plots & land in Kiambu/Ruiru/Machakos. Free for agents & developers. Kenya’s #1 real estate platform." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/hh.png" />
+    <meta property="og:url" content="https://kenyaproperties.co.ke/" />
+    <meta property="og:image" content="https://kenyaproperties.co.ke/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Modern houses and land plots for sale in Nairobi Kenya | Kenya Properties platform" />
+    <meta property="og:site_name" content="Kenya Properties" />
+    <meta property="og:locale" content="en_KE" />
 
-    <!-- Twitter -->
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8787623516632800"
+     crossorigin="anonymous"></script>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FKX7R67MPW"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-FKX7R67MPW');
+    </script>
+
+    <!-- Twitter/X Cards: Large image performs best; tie to your active handle -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="" />
-    <meta name="twitter:image" content="/hh.png" />
+    <meta name="twitter:title" content="Kenya Properties | Houses, Apartments, Land for Sale & Rent – Free Listings" />
+    <meta name="twitter:description" content="Connect with verified agents & developers. Search Nairobi, Kiambu, Mombasa properties today!" />
+    <meta name="twitter:image" content="https://kenyaproperties.co.ke/og-image.jpg" />
+    <meta name="twitter:site" content="@Kenbiz25" />
+    <meta name="twitter:creator" content="@Kenbiz25" />
 
-    <!-- Performance: preconnect to font origins -->
+    <!-- Local & geo targeting (still relevant for local pack & Kenya-specific ranking) -->
+    <meta name="geo.region" content="KE" />
+    <meta name="geo.placename" content="Kenya,Nairobi,Kiambu,Machakos,Mombasa" />
+    <meta name="geo.position" content="-1.2921;36.8219" /> <!-- Approx Nairobi coordinates; helps some local signals -->
+
+    <!-- Structured Data Foundation: Add JSON-LD in <head> or <body> for Organization + WebSite (boosts E-E-A-T & rich results) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Kenya Properties",
+      "url": "https://kenyaproperties.co.ke/",
+      "description": "Leading platform for buying, renting and listing houses, apartments, land & plots across Kenya – free for agents & developers.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://kenyaproperties.co.ke/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      },
+      "inLanguage": "en-KE",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Kenya Properties",
+        "url": "https://kenyaproperties.co.ke/",
+        "logo": "https://kenyaproperties.co.ke/logo.png",
+        "sameAs": ["https://x.com/Kenbiz25"]
+      }
+    }
+    </script>
+
+    <!-- Preconnects & Fonts (good – keep) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      rel="preconnect"
-      href="https://fonts.gstatic.com"
-      crossorigin
-    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-    <!-- Google Fonts: Inter + Space Grotesk -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Optional but powerful: DNS prefetch for common CDNs if using images/maps -->
+    <link rel="dns-prefetch" href="https://images.unsplash.com" /> <!-- example if using stock images -->
   </head>
 
   <body>

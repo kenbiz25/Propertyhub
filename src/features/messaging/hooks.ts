@@ -1,13 +1,15 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabaseClient";
+import { collection, onSnapshot, orderBy, query as fsQuery, where } from "firebase/firestore";
+import { auth, db } from "@/lib/firebaseClient";
 import {
   startConversation,
   fetchConversationsForMe,
   fetchMessages,
   sendMessage,
+  getMyRole,
 } from "./api";
 import type { Conversation, Message } from "./types";
 
@@ -24,10 +26,82 @@ export const MQ = {
  * Conversations list (for current user/agent)
  * ========================================================================= */
 export function useConversations() {
-  return useQuery<Conversation[]>({
+  const qc = useQueryClient();
+  const meId = auth.currentUser?.uid;
+
+  const queryState = useQuery<Conversation[]>({
     queryKey: MQ.conversations,
     queryFn: fetchConversationsForMe,
   });
+
+  useEffect(() => {
+    if (!meId) return;
+
+    let unsubscribe: (() => void) | null = null;
+    let alive = true;
+
+    (async () => {
+      const role = await getMyRole();
+      if (!alive) return;
+
+      if (role === "admin" || role === "superadmin") {
+        const qAll = fsQuery(collection(db, "conversations"), orderBy("created_at", "desc"));
+        unsubscribe = onSnapshot(qAll, (snap) => {
+          const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Conversation[];
+          qc.setQueryData(MQ.conversations, rows);
+        });
+        return;
+      }
+
+      let userRows: Conversation[] = [];
+      let agentRows: Conversation[] = [];
+
+      const update = () => {
+        const map = new Map<string, Conversation>();
+        userRows.forEach((r) => map.set(r.id, r));
+        agentRows.forEach((r) => map.set(r.id, r));
+        const rows = Array.from(map.values());
+        rows.sort((a, b) => {
+          const ta = (a.created_at?.toMillis?.() ?? 0);
+          const tb = (b.created_at?.toMillis?.() ?? 0);
+          return tb - ta;
+        });
+        qc.setQueryData(MQ.conversations, rows);
+      };
+
+      const qAsUser = fsQuery(
+        collection(db, "conversations"),
+        where("user_id", "==", meId),
+        orderBy("created_at", "desc")
+      );
+      const qAsAgent = fsQuery(
+        collection(db, "conversations"),
+        where("agent_id", "==", meId),
+        orderBy("created_at", "desc")
+      );
+
+      const unsubUser = onSnapshot(qAsUser, (snap) => {
+        userRows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Conversation[];
+        update();
+      });
+      const unsubAgent = onSnapshot(qAsAgent, (snap) => {
+        agentRows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Conversation[];
+        update();
+      });
+
+      unsubscribe = () => {
+        unsubUser();
+        unsubAgent();
+      };
+    })();
+
+    return () => {
+      alive = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, [qc, meId]);
+
+  return queryState;
 }
 
 /* =========================================================================
@@ -35,9 +109,8 @@ export function useConversations() {
  * ========================================================================= */
 export function useMessages(conversation_id?: string) {
   const qc = useQueryClient();
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  const query = useQuery<Message[]>({
+  const queryState = useQuery<Message[]>({
     queryKey: conversation_id ? MQ.messages(conversation_id) : ["messages", "conversation", "missing"],
     queryFn: () => {
       if (!conversation_id) return Promise.reject("Missing conversation_id");
@@ -46,31 +119,25 @@ export function useMessages(conversation_id?: string) {
     enabled: !!conversation_id,
   });
 
-  // Realtime: listen to INSERT on messages for this conversation
+  // Realtime: Firestore snapshot for this conversation
   useEffect(() => {
     if (!conversation_id) return;
 
-    // Clean up any previous subscription
-    channelRef.current?.unsubscribe();
+    const q = fsQuery(
+      collection(db, "messages"),
+      where("conversation_id", "==", conversation_id),
+      orderBy("created_at", "asc")
+    );
 
-    const channel = supabase
-      .channel(`messages-${conversation_id}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversation_id}` },
-        (payload: any) => {
-          const newMsg = payload.new as Message;
-          // Optimistically append to cache
-          qc.setQueryData<Message[]>(MQ.messages(conversation_id), (old = []) => [...old, newMsg]);
-        }
-      )
-      .subscribe();
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Message[];
+      qc.setQueryData(MQ.messages(conversation_id), rows);
+    });
 
-    channelRef.current = channel;
-    return () => channel.unsubscribe();
+    return () => unsubscribe();
   }, [conversation_id, qc]);
 
-  return query;
+  return queryState;
 }
 
 /* =========================================================================

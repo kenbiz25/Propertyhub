@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useDeleteProperty } from "@/features/properties/hooks";
+import { useDeleteProperty, useSetPropertyStatus } from "@/features/properties/hooks";
 import PropertyActionsDropdown, {
   ActionsRow,
 } from "@/components/dashboard/PropertyActionsDropdown";
@@ -25,6 +25,9 @@ type Props = {
   onDelete?: (row: Row) => Promise<void> | void;
   onDuplicate?: (row: Row) => Promise<void> | void;
   onArchive?: (row: Row) => Promise<void> | void;
+  onPublish?: (row: Row) => Promise<void> | void;
+  onPause?: (row: Row) => Promise<void> | void;
+  getBoostHref?: (row: Row) => string | null;
   onAfterAction?: () => void; // e.g., refresh list
 };
 
@@ -34,10 +37,14 @@ export default function PropertyTable({
   onDelete,
   onDuplicate,
   onArchive,
+  onPublish,
+  onPause,
+  getBoostHref,
   onAfterAction,
 }: Props) {
   const navigate = useNavigate();
   const delMutation = useDeleteProperty();
+  const statusMutation = useSetPropertyStatus();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const badge = (status: Row["status"]) => {
@@ -114,6 +121,36 @@ export default function PropertyTable({
     }
   };
 
+  const handlePublish = async (row: Row) => {
+    try {
+      if (onPublish) {
+        await onPublish(row);
+      } else {
+        await statusMutation.mutateAsync({ id: row.id, status: "published" });
+      }
+      toast.success(`"${row.title}" is now live`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to publish property");
+    } finally {
+      onAfterAction?.();
+    }
+  };
+
+  const handlePause = async (row: Row) => {
+    try {
+      if (onPause) {
+        await onPause(row);
+      } else {
+        await statusMutation.mutateAsync({ id: row.id, status: "draft" });
+      }
+      toast.success(`"${row.title}" is paused`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to pause property");
+    } finally {
+      onAfterAction?.();
+    }
+  };
+
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-800">
       <table className="min-w-full text-sm">
@@ -180,7 +217,47 @@ export default function PropertyTable({
 
                 <td className="px-4 py-3">
                   {/* Unified 3-dots actions to match cards */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className="rounded-md border border-border/70 px-2.5 py-1 text-xs text-white hover:border-primary/60"
+                      onClick={() => handleEdit(p)}
+                    >
+                      Edit
+                    </button>
+                    {p.status === "published" ? (
+                      <button
+                        type="button"
+                        className="rounded-md border border-border/70 px-2.5 py-1 text-xs text-white hover:border-primary/60"
+                        onClick={() => handlePause(p)}
+                      >
+                        Pause
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="rounded-md bg-primary px-2.5 py-1 text-xs text-white hover:bg-primary/90"
+                        onClick={() => handlePublish(p)}
+                      >
+                        Live
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="rounded-md border border-red-600/60 px-2.5 py-1 text-xs text-red-200 hover:border-red-500"
+                      onClick={() => handleDelete(p)}
+                    >
+                      Delete
+                    </button>
+                    {getBoostHref?.(p) && (
+                      <button
+                        type="button"
+                        className="rounded-md border border-border/70 px-2.5 py-1 text-xs text-white hover:border-primary/60"
+                        onClick={() => navigate(getBoostHref(p) as string)}
+                      >
+                        Boost
+                      </button>
+                    )}
                     {/* Keep inline buttons if you like; otherwise rely solely on the dropdown */}
                     <PropertyActionsDropdown
                       row={actionsRow}

@@ -16,7 +16,7 @@ import PropertyTable from "@/components/dashboard/PropertyTable";
 import ViewToggle, { ViewMode } from "@/components/ui/ViewToggle";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { useMyProperties, useDeleteProperty } from "@/features/properties/hooks";
+import { useMyProperties, useDeleteProperty, useSetPropertyStatus } from "@/features/properties/hooks";
 
 // Helper to format price
 const fmtPrice = (price?: number | null) =>
@@ -38,25 +38,33 @@ export default function AgentOverview() {
   }, []);
 
   // ✅ Fetch agent's properties from Firestore
-  const { data: recentDb = [], isLoading, isError } = useMyProperties({ pageSize: 3 });
+  const { data: recentDb, isLoading, isError } = useMyProperties({ pageSize: 3 });
+  const recentRows = Array.isArray(recentDb?.data) ? recentDb?.data : [];
   const deleteMutation = useDeleteProperty();
+  const statusMutation = useSetPropertyStatus();
 
   // ✅ Map DB rows → UI-friendly model
   const items = useMemo(
     () =>
-      (recentDb ?? []).map((p: any) => ({
+      (recentRows ?? []).map((p: any) => ({
         id: p.id,
         title: p.title,
         location:
           p.location ?? [p.neighborhood, p.city, p.country].filter(Boolean).join(", "),
         price: fmtPrice(p.price),
         status: mapStatus(p.status),
+        statusKey:
+          String(p.status ?? "").toLowerCase() === "published"
+            ? "published"
+            : String(p.status ?? "").toLowerCase() === "draft"
+            ? "draft"
+            : "archived",
         views: Number(p.views ?? 0),
         inquiries: Number(p.inquiries ?? 0),
         image: p.thumbnail_url ?? p.image ?? p.image_urls?.[0] ?? "",
         type: (p.listing_type as "rent" | "sale") ?? "rent",
       })),
-    [recentDb]
+    [recentRows]
   );
 
   // ✅ Totals for stats
@@ -66,6 +74,10 @@ export default function AgentOverview() {
 
   const handleEdit = (id: string) => navigate(`/agent/properties/${id}/edit`);
   const handleDelete = async (id: string) => deleteMutation.mutate(id);
+  const handlePublish = async (id: string) =>
+    statusMutation.mutate({ id, status: "published" });
+  const handlePause = async (id: string) =>
+    statusMutation.mutate({ id, status: "draft" });
 
   // ✅ Loading & Error states
   if (isLoading) return <div className="p-6 text-gray-400">Loading dashboard data...</div>;
@@ -138,6 +150,8 @@ export default function AgentOverview() {
                   onEdit={() => handleEdit(p.id)}
                   onView={() => navigate(`/listing/${p.id}`)}
                   onDelete={() => handleDelete(p.id)}
+                  onPublish={() => handlePublish(p.id)}
+                  onPause={() => handlePause(p.id)}
                   disabled={deleteMutation.isPending}
                 />
               ))}
@@ -162,6 +176,8 @@ export default function AgentOverview() {
               }))}
               onEdit={(row) => handleEdit(row.id)}
               onDelete={(row) => handleDelete(row.id)}
+              onPublish={(row) => handlePublish(row.id)}
+              onPause={(row) => handlePause(row.id)}
             />
           )}
         </div>
@@ -195,13 +211,13 @@ export default function AgentOverview() {
 
           <h2 className="font-display text-xl font-bold mt-8 mb-4 text-white">Quick Actions</h2>
           <div className="space-y-3">
-            <Link to="/agent/properties/new" className="block">
+            <Link to="/agent/list-property" className="block">
               <Button className="w-full justify-start" variant="outline">
                 <Building2 className="w-4 h-4 mr-2" />
                 Add New Property
               </Button>
             </Link>
-            <Link to="/agent/messages" className="block">
+            <Link to="/messages" className="block">
               <Button className="w-full justify-start" variant="outline">
                 <MessageSquare className="w-4 h-4 mr-2" />
                 View Messages

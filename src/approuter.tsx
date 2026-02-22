@@ -2,12 +2,15 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HelmetProvider } from "react-helmet-async";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import RequireAuth from "@/components/auth/RequireAuth";
 import { withRoleGuard } from "@/components/auth/withRoleGuard";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import CookieConsent from "@/components/layouts/CookieConsent";
+import WhatsAppSupport from "@/components/layouts/WhatsAppSupport";
 
 // Top-level pages
 import Auth from "@/pages/auth/Auth";
@@ -30,15 +33,20 @@ const Reauth = lazy(() => import("@/pages/Reauth"));
 const AgentOverview = lazy(() => import("@/pages/agent/AgentOverview"));
 const AgentProperties = lazy(() => import("@/pages/agent/AgentProperties"));
 const AgentSettings = lazy(() => import("@/pages/agent/Settings"));
-const AgentMessages = lazy(() => import("@/pages/agent/AgentMessages"));
 const AgentKyc = lazy(() => import("@/pages/agent/AgentKyc"));
 const TeamMembers = lazy(() => import("@/pages/agent/TeamMembers"));
 const PromotionRequests = lazy(() => import("@/pages/agent/PromotionRequests"));
 const AgentProfile = lazy(() => import("@/pages/agent/AgentProfile"));
 const ListPropertyAgent = lazy(() => import("@/pages/agent/ListProperty"));
+const BoostPricing = lazy(() => import("@/pages/agent/BoostPricing"));
+const BoostListing = lazy(() => import("@/pages/agent/BoostListing"));
 
 // Customer dashboard
 const CustomerView = lazy(() => import("@/pages/users/CustomerView"));
+const CustomerProfile = lazy(() => import("@/pages/users/CustomerProfile"));
+const Account = lazy(() => import("@/pages/account/Account"));
+const AccountFavorites = lazy(() => import("@/pages/account/AccountFavorites"));
+const AccountInquiries = lazy(() => import("@/pages/account/AccountInquiries"));
 
 // Admin dashboard
 const AdminConsole = lazy(() => import("@/pages/admin/AdminConsole"));
@@ -58,6 +66,7 @@ const SubscribeCancel = lazy(() => import("@/pages/subscription/SubscribeCancel"
 // Misc pages
 const About = lazy(() => import("@/pages/About"));
 const Agents = lazy(() => import("@/pages/Agents"));
+const MortgageCalculator = lazy(() => import("@/pages/MortgageCalculator"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const Terms = lazy(() => import("@/pages/Terms"));
 const Search = lazy(() => import("@/pages/Search"));
@@ -111,8 +120,11 @@ const routes = [
   /* Public browse */
   { path: "/listings", element: (<Suspense fallback={<Loader />}><Listings /></Suspense>) },
   { path: "/listing/:id", element: (<Suspense fallback={<Loader />}><ListingDetail /></Suspense>) },
+  { path: "/list-property", element: (<Suspense fallback={<Loader />}><ListPropertyPublic /></Suspense>) },
   { path: "/about", element: (<Suspense fallback={<Loader />}><About /></Suspense>) },
   { path: "/agents", element: (<Suspense fallback={<Loader />}><Agents /></Suspense>) },
+  { path: "/agents/:id", element: (<Suspense fallback={<Loader />}><AgentProfile /></Suspense>) },
+  { path: "/mortgage-calculator", element: (<Suspense fallback={<Loader />}><MortgageCalculator /></Suspense>) },
   { path: "/privacy", element: (<Suspense fallback={<Loader />}><Privacy /></Suspense>) },
   { path: "/terms", element: (<Suspense fallback={<Loader />}><Terms /></Suspense>) },
 
@@ -160,21 +172,61 @@ const routes = [
     ),
   },
   {
-    path: "/agent/messages",
-    element: (
-      <RequireAuth>
-        <DashboardLayout>
-          <Suspense fallback={<Loader />}><AgentMessages /></Suspense>
-        </DashboardLayout>
-      </RequireAuth>
-    ),
-  },
-  {
     path: "/agent/list-property",
     element: (
       <RequireAuth>
         <DashboardLayout>
           <Suspense fallback={<Loader />}><ListPropertyAgent /></Suspense>
+        </DashboardLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/agent/kyc",
+    element: (
+      <RequireAuth>
+        <DashboardLayout>
+          <Suspense fallback={<Loader />}><AgentKycGuarded /></Suspense>
+        </DashboardLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/agent/team",
+    element: (
+      <RequireAuth>
+        <DashboardLayout>
+          <Suspense fallback={<Loader />}><TeamMembersGuarded /></Suspense>
+        </DashboardLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/agent/promotions",
+    element: (
+      <RequireAuth>
+        <DashboardLayout>
+          <Suspense fallback={<Loader />}><PromotionRequestsGuarded /></Suspense>
+        </DashboardLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/agent/pricing",
+    element: (
+      <RequireAuth>
+        <DashboardLayout>
+          <Suspense fallback={<Loader />}><BoostPricing /></Suspense>
+        </DashboardLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/agent/boost/:id",
+    element: (
+      <RequireAuth>
+        <DashboardLayout>
+          <Suspense fallback={<Loader />}><BoostListing /></Suspense>
         </DashboardLayout>
       </RequireAuth>
     ),
@@ -226,8 +278,51 @@ const routes = [
   /* Misc */
   { path: "/search", element: (<Suspense fallback={<Loader />}><Search /></Suspense>) },
   { path: "/notifications", element: (<Suspense fallback={<Loader />}><Notifications /></Suspense>) },
-  { path: "/favorites", element: (<Suspense fallback={<Loader />}><Favorites /></Suspense>) },
-  { path: "/saved-searches", element: (<Suspense fallback={<Loader />}><SavedSearches /></Suspense>) },
+  {
+    path: "/favorites",
+    element: (
+      <RequireAuth>
+        <DashboardLayout>
+          <Suspense fallback={<Loader />}><Favorites /></Suspense>
+        </DashboardLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/saved-searches",
+    element: (
+      <RequireAuth>
+        <DashboardLayout>
+          <Suspense fallback={<Loader />}><SavedSearches /></Suspense>
+        </DashboardLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/profile",
+    element: (
+      <RequireAuth>
+        <DashboardLayout>
+          <Suspense fallback={<Loader />}><CustomerProfile /></Suspense>
+        </DashboardLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/account",
+    element: (
+      <RequireAuth>
+        <DashboardLayout>
+          <Suspense fallback={<Loader />}><Account /></Suspense>
+        </DashboardLayout>
+      </RequireAuth>
+    ),
+    children: [
+      { index: true, element: (<Suspense fallback={<Loader />}><AccountFavorites /></Suspense>) },
+      { path: "favorites", element: (<Suspense fallback={<Loader />}><AccountFavorites /></Suspense>) },
+      { path: "inquiries", element: (<Suspense fallback={<Loader />}><AccountInquiries /></Suspense>) },
+    ],
+  },
   { path: "/reviews", element: (<Suspense fallback={<Loader />}><Reviews /></Suspense>) },
   { path: "/report", element: (<Suspense fallback={<Loader />}><ReportContent /></Suspense>) },
   { path: "/delete-account", element: (<Suspense fallback={<Loader />}><DeleteAccount /></Suspense>) },
@@ -236,17 +331,25 @@ const routes = [
   { path: "*", element: (<Suspense fallback={<Loader />}><NotFound /></Suspense>) },
 ];
 
-const router = createBrowserRouter(routes);
+const router = createBrowserRouter(routes, {
+  future: {
+    v7_startTransition: true,
+  },
+});
 const queryClient = new QueryClient();
 
 export default function AppRouter() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <RouterProvider router={router} />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <CookieConsent />
+          <WhatsAppSupport />
+          <RouterProvider router={router} />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 }

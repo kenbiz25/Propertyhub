@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useMyProperties, useDeleteProperty } from "@/features/properties/hooks";
+import { useMyProperties, useDeleteProperty, useSetPropertyStatus } from "@/features/properties/hooks";
 
 // ---- Helpers & constants ----
 const fmtPrice = (price?: number | null) =>
@@ -53,13 +53,15 @@ export default function AgentProperties({ basePath = "/agent" }: AgentProperties
   const [view, setView] = useState<"table" | "card">("table");
 
   // ✅ Fetch agent's properties from Firestore
-  const { data: rowsDb = [], isLoading, isError } = useMyProperties({ pageSize: 50 });
+  const { data: rowsDb, isLoading, isError } = useMyProperties({ pageSize: 50 });
+  const rows = rowsDb?.data ?? [];
   const deleteMutation = useDeleteProperty();
+  const statusMutation = useSetPropertyStatus();
 
   // ✅ Map DB rows → UI-friendly model
   const mapped = useMemo(
     () =>
-      (rowsDb ?? []).map((p: any) => {
+      (rows ?? []).map((p: any) => {
         const statusKey = toStatusKey(p.status);
         const typeKey = toTypeKey(p.listing_type);
 
@@ -86,7 +88,7 @@ export default function AgentProperties({ basePath = "/agent" }: AgentProperties
           verified: !!p.verified,
         };
       }),
-    [rowsDb]
+    [rows]
   );
 
   // ✅ Summaries (nice chips under header)
@@ -117,9 +119,17 @@ export default function AgentProperties({ basePath = "/agent" }: AgentProperties
     });
   }, [mapped, search, statusFilter, typeFilter]);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: string, title?: string) => {
+    const ok = confirm(`Delete "${title ?? "this property"}"? This cannot be undone.`);
+    if (!ok) return;
     deleteMutation.mutate(id);
   };
+
+  const handlePublish = (id: string) =>
+    statusMutation.mutate({ id, status: "published" });
+
+  const handlePause = (id: string) =>
+    statusMutation.mutate({ id, status: "draft" });
 
   // ---- UI ----
   if (isLoading) {
@@ -178,6 +188,12 @@ export default function AgentProperties({ basePath = "/agent" }: AgentProperties
         </div>
 
         <div className="flex flex-wrap gap-3 items-center">
+          <Button asChild className="shrink-0">
+            <Link to={`${basePath}/list-property`}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Property
+            </Link>
+          </Button>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40">
               <Filter className="w-4 h-4 mr-2" />
@@ -259,31 +275,38 @@ export default function AgentProperties({ basePath = "/agent" }: AgentProperties
               inquiries: p.inquiries,
               image: p.image,
             }))}
+            getBoostHref={(row) => `${basePath}/boost/${row.id}`}
             onEdit={(row) =>
               (window.location.href = `${basePath}/properties/${row.id}/edit`)
             }
-            onDelete={(row) => handleDelete(row.id)}
+            onDelete={(row) => handleDelete(row.id, row.title)}
+            onPublish={(row) => handlePublish(row.id)}
+            onPause={(row) => handlePause(row.id)}
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((p) => (
               <PropertyCard
                 key={p.id}
-                id={p.id}
-                title={p.title}
-                location={p.location}
-                price={p.price}
-                status={p.statusLabel}
-                views={p.views}
-                inquiries={p.inquiries}
-                image={p.image}
-                type={p.typeKey}
-                verified={p.verified}
-                is_promoted={p.is_promoted}
+                property={{
+                  id: p.id,
+                  title: p.title,
+                  location: p.location,
+                  price: p.price,
+                  status: p.statusLabel,
+                  statusKey: p.statusKey,
+                  views: p.views,
+                  inquiries: p.inquiries,
+                  image: p.image,
+                }}
+                boostHref={`${basePath}/boost/${p.id}`}
                 onEdit={() =>
                   (window.location.href = `${basePath}/properties/${p.id}/edit`)
                 }
-                onDelete={() => handleDelete(p.id)}
+                onDelete={() => handleDelete(p.id, p.title)}
+                onPublish={() => handlePublish(p.id)}
+                onPause={() => handlePause(p.id)}
+                onView={() => (window.location.href = `/listing/${p.id}`)}
               />
             ))}
           </div>

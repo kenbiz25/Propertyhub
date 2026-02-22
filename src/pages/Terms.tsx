@@ -2,10 +2,17 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/layouts/Navbar";
 import Footer from "@/components/layouts/Footer";
+import SEO from "@/components/SEO";
 
 const Terms = () => {
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Terms of Service | Kenya Properties"
+        description="Review the Kenya Properties terms of service – the rules and conditions governing the use of our real estate platform for buyers, renters, agents, and developers."
+        canonical="/terms"
+        noindex={false}
+      />
       <Navbar />
 
       <main className="pt-20">
@@ -26,7 +33,7 @@ const Terms = () => {
               <section>
                 <h2 className="font-display text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
                 <p className="text-muted-foreground">
-                  By accessing or using Househunter.com ("the Service"), you agree to be bound by these 
+                  By accessing or using KenyaProperties.co.ke ("the Service"), you agree to be bound by these 
                   Terms of Service. If you do not agree to these terms, please do not use the Service.
                 </p>
               </section>
@@ -34,7 +41,7 @@ const Terms = () => {
               <section>
                 <h2 className="font-display text-2xl font-semibold mb-4">2. Description of Service</h2>
                 <p className="text-muted-foreground">
-                  Househunter is a real estate marketplace that connects property seekers with property 
+                  Kenya Properties is a real estate marketplace that connects property seekers with property 
                   owners and agents. We provide a platform for listing and discovering properties for 
                   sale, rent, or lease across Kenya and Africa.
                 </p>
@@ -43,7 +50,7 @@ const Terms = () => {
               <section>
                 <h2 className="font-display text-2xl font-semibold mb-4">3. User Responsibilities</h2>
                 <p className="text-muted-foreground mb-4">
-                  As a user of Househunter, you agree to:
+                  As a user of Kenya Properties, you agree to:
                 </p>
                 <ul className="list-disc list-inside text-muted-foreground space-y-2">
                   <li>Provide accurate and truthful information in your listings and profile</li>
@@ -58,7 +65,7 @@ const Terms = () => {
               <section>
                 <h2 className="font-display text-2xl font-semibold mb-4">4. Property Listings</h2>
                 <p className="text-muted-foreground mb-4">
-                  Property owners and agents who list properties on Househunter must:
+                  Property owners and agents who list properties on Kenya Properties must:
                 </p>
                 <ul className="list-disc list-inside text-muted-foreground space-y-2">
                   <li>Have legal authority to list the property</li>
@@ -72,7 +79,7 @@ const Terms = () => {
               <section>
                 <h2 className="font-display text-2xl font-semibold mb-4">5. Disclaimer</h2>
                 <p className="text-muted-foreground">
-                  Househunter is a marketplace and does not own or control any properties listed on the 
+                  Kenya Properties is a marketplace and does not own or control any properties listed on the 
                   platform. We do not guarantee the accuracy of listings, the quality of properties, or 
                   the conduct of users. Buyers and tenants must independently verify property ownership, 
                   conduct title searches (e.g., via official registries), and comply with local laws.
@@ -82,7 +89,7 @@ const Terms = () => {
               <section>
                 <h2 className="font-display text-2xl font-semibold mb-4">6. Limitation of Liability</h2>
                 <p className="text-muted-foreground">
-                  Househunter shall not be liable for any direct, indirect, incidental, special, or 
+                  Kenya Properties shall not be liable for any direct, indirect, incidental, special, or 
                   consequential damages arising from your use of the Service or any transactions 
                   conducted through the platform.
                 </p>
@@ -91,7 +98,7 @@ const Terms = () => {
               <section>
                 <h2 className="font-display text-2xl font-semibold mb-4">7. Payment Terms</h2>
                 <p className="text-muted-foreground">
-                  Certain features of Househunter require payment. All payments are processed securely 
+                  Certain features of Kenya Properties require payment. All payments are processed securely 
                   through our payment partners (M-Pesa, Flutterwave, Paystack). Subscription fees are 
                   non-refundable unless otherwise stated.
                 </p>
@@ -117,8 +124,8 @@ const Terms = () => {
                 <h2 className="font-display text-2xl font-semibold mb-4">10. Contact</h2>
                 <p className="text-muted-foreground">
                   For questions about these Terms of Service, please contact us at{" "}
-                  <a href="mailto:legal@househunter.co.ke" className="text-primary hover:underline">
-                    legal@househunter.co.ke
+                  <a href="mailto:legal@kenyaproperties.co.ke" className="text-primary hover:underline">
+                    legal@kenyaproperties.co.ke
                   </a>
                 </p>
               </section>
