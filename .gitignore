@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Firebase CLI cache
+.firebase/
+
 # Environment variables – NEVER commit these
 .env
 .env.*
