@@ -331,6 +331,15 @@ const routes = [
   { path: "*", element: (<Suspense fallback={<Loader />}><NotFound /></Suspense>) },
 ];
 
+// When a new deployment drops old chunk hashes, dynamic imports 404.
+// Vite fires this event; reloading fetches the fresh bundle automatically.
+if (typeof window !== "undefined") {
+  window.addEventListener("vite:preloadError", (event) => {
+    event.preventDefault();
+    window.location.reload();
+  });
+}
+
 const router = createBrowserRouter(routes, {
   future: {
     v7_startTransition: true,
