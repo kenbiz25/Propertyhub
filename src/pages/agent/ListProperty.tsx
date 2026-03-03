@@ -210,6 +210,7 @@ export default function ListProperty() {
         thumbnail_url: uploadedUrls[0] ?? null,
         image: uploadedUrls[0] ?? null,
         status: "published",
+        published: true,          // required for browse/search query
       });
 
       toast.success("Property listed successfully.");
