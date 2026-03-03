@@ -6,15 +6,22 @@ import { collection, doc, onSnapshot, setDoc, deleteDoc, serverTimestamp } from 
 export function useFavorites() {
   const [favIds, setFavIds] = useState<Set<string>>(new Set());
   const [ready, setReady] = useState(false);
-  const user = auth.currentUser;
+  // Use onAuthStateChanged so favorites load correctly even when
+  // Firebase auth is still initializing on the first render.
+  const [uid, setUid] = useState<string | null>(() => auth.currentUser?.uid ?? null);
 
   useEffect(() => {
-    if (!user) {
+    const unsub = auth.onAuthStateChanged((u) => setUid(u?.uid ?? null));
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!uid) {
       setFavIds(new Set());
       setReady(true);
       return;
     }
-    const colRef = collection(db, "user_favorites", user.uid, "properties");
+    const colRef = collection(db, "user_favorites", uid, "properties");
     const unsub = onSnapshot(
       colRef,
       (snap) => {
@@ -26,7 +33,7 @@ export function useFavorites() {
       () => setReady(true)
     );
     return () => unsub();
-  }, [user?.uid]);
+  }, [uid]);
 
   const isFavorite = useCallback((propertyId: string) => favIds.has(propertyId), [favIds]);
 
