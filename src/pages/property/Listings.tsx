@@ -356,7 +356,7 @@ const Listings = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {isLoading
                 ? Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="glass-card rounded-2xl overflow-hidden border animate-pulse">
