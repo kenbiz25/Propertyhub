@@ -81,13 +81,16 @@ function toListingRow(d: any, id: string): ListingRow {
 }
 
 async function fetchListings(): Promise<ListingRow[]> {
-  const base = [where("published", "==", true)];
+  // Query by status field — covers all properties (old data has only
+  // status:"published"; new data has both status and published:true).
+  const base = [where("status", "==", "published")];
 
   try {
     const q = fsQuery(collection(db, "properties"), ...base, orderBy("created_at", "desc"));
     const snap = await getDocs(q);
     return snap.docs.map((doc) => toListingRow(doc.data(), doc.id));
   } catch {
+    // Fallback without ordering (composite index may not exist yet)
     const q = fsQuery(collection(db, "properties"), ...base);
     const snap = await getDocs(q);
     return snap.docs.map((doc) => toListingRow(doc.data(), doc.id));
