@@ -7,6 +7,7 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { validateKycFile, sanitizeFilename } from "@/lib/uploadValidation";
 
 type DocKey =
   | "national_id"
@@ -43,6 +44,8 @@ function AgentKyc() {
 
   const handleFileChange = (key: DocKey, file?: File | null) => {
     if (!file) return;
+    const result = validateKycFile(file);
+    if (!result.ok) { toast.error(result.error); return; }
     setFiles((prev) => ({ ...prev, [key]: file }));
   };
 
@@ -65,7 +68,7 @@ function AgentKyc() {
       for (const docDef of REQUIRED_DOCS) {
         const file = files[docDef.key];
         if (!file) continue;
-        const ext = file.name.split(".").pop() || "bin";
+        const ext = sanitizeFilename(file.name).split(".").pop() || "bin";
         const storageRef = ref(storage, `kyc/${user.uid}/${docDef.key}.${ext}`);
         await uploadBytes(storageRef, file, { contentType: file.type || "application/octet-stream" });
         const url = await getDownloadURL(storageRef);

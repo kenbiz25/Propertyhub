@@ -18,6 +18,7 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { COUNTRIES } from "@/lib/constants/countries";
 import { useCities } from "@/hooks/useCities";
 import { Plus, Trash2 } from "lucide-react";
+import { validateImages } from "@/lib/uploadValidation";
 
 const LISTING_TYPES = ["rent", "sale", "lease"] as const;
 const PROPERTY_TYPES = [
@@ -398,7 +399,12 @@ export default function ListProperty() {
             type="file"
             multiple
             accept="image/*"
-            onChange={(e) => setImages(Array.from(e.target.files ?? []))}
+            onChange={(e) => {
+              const selected = Array.from(e.target.files ?? []);
+              const result = validateImages(selected);
+              if (!result.ok) { toast.error(result.error); e.target.value = ""; return; }
+              setImages(selected);
+            }}
           />
           {imagePreviews.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">

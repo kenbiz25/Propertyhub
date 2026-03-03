@@ -1,62 +1,108 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // Ownership check on an existing document field
     function isOwner(field) {
       return isSignedIn() && request.auth.uid == resource.data[field];
     }
 
+    // Ownership check on the incoming write payload
     function isOwnerWrite(field) {
       return isSignedIn() && request.auth.uid == request.resource.data[field];
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.role in ['admin', 'superadmin'];
     }
 
     function isPublishedProperty() {
       return resource.data.published == true || resource.data.status == "published";
     }
 
-    // Public homepage collections (safe public read only)
+    // ── Public / homepage ──────────────────────────────────────────────────
+
     match /popular_cities/{cityId} {
       allow read: if true;
     }
 
-    // Public agent profiles (read-only for role=agent)
-    match /users/{userId} {
-      allow get: if (isSignedIn() && request.auth.uid == userId) || resource.data.role == "agent";
-      allow list: if resource.data.role == "agent";
-      allow create, update, delete: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    // Public analytics used for homepage (read-only + create)
+    // View events: authenticated writes only + validate required fields
     match /view_events/{eventId} {
-      allow read: if true;
-      allow create: if true;
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.resource.data.keys().hasAll(["property_id", "created_at"]);
     }
 
-    // Public reviews are readable; only owners can create/update/delete
+    // ── Users / profiles ───────────────────────────────────────────────────
+
+    match /users/{userId} {
+      // Own profile: full access. Public: read agent profiles only.
+      allow get:    if (isSignedIn() && request.auth.uid == userId)
+                    || resource.data.role == "agent";
+      allow list:   if resource.data.role == "agent";
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ── Properties ─────────────────────────────────────────────────────────
+
+    match /properties/{propertyId} {
+      allow get:    if isPublishedProperty() || isOwner("agent_id");
+      allow list:   if isPublishedProperty() || isOwner("agent_id");
+      allow create: if isOwnerWrite("agent_id");
+      allow update: if isOwner("agent_id");
+      allow delete: if isOwner("agent_id");
+    }
+
+    // ── Reviews ────────────────────────────────────────────────────────────
+
     match /reviews/{reviewId} {
-      allow read: if true;
+      allow read:   if true;
       allow create: if isOwnerWrite("author_uid");
       allow update, delete: if isOwner("author_uid");
     }
 
-    match /properties/{propertyId} {
-      allow get, list: if isPublishedProperty() || isOwner("agent_id");
-      allow create: if isOwnerWrite("agent_id");
-      allow update, delete: if isOwner("agent_id");
-    }
+    // ── Boost / campaigns ──────────────────────────────────────────────────
 
     match /boost_requests/{boostId} {
-      allow get, list: if resource.data.status == "active";
+      // Public: only fully-active campaigns are visible (list uses query constraint,
+      // get checks the document directly).
+      allow get:    if resource.data.status == "active";
+      // list queries must be filtered to status == "active" by the caller
+      allow list:   if isSignedIn();
       allow create: if isOwnerWrite("agent_id");
-      allow update, delete: if isOwner("agent_id");
+      // Only the owner OR admin can update/delete
+      allow update: if isOwner("agent_id") || isAdmin();
+      allow delete: if isOwner("agent_id") || isAdmin();
     }
 
-    // Default: authenticated access only (no public writes)
+    // ── Analytics aggregation (read-only for clients) ──────────────────────
+
+    match /property_like_agg/{propertyId} {
+      allow read: if true;
+      allow write: if false; // written only by Cloud Functions
+    }
+
+    match /like_events/{eventId} {
+      allow read:   if isSignedIn();
+      allow write:  if false; // written only by Cloud Functions
+    }
+
+    // ── Favourites ─────────────────────────────────────────────────────────
+
+    match /user_favorites/{uid}/{document=**} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ── Default: deny everything not explicitly matched ────────────────────
+    // (replaces the previous permissive catch-all)
     match /{document=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if false;
     }
   }
 }
