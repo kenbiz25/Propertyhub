@@ -6,12 +6,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Ownership check on an existing document field
     function isOwner(field) {
       return isSignedIn() && request.auth.uid == resource.data[field];
     }
 
-    // Ownership check on the incoming write payload
     function isOwnerWrite(field) {
       return isSignedIn() && request.auth.uid == request.resource.data[field];
     }
@@ -30,9 +28,14 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // View events: authenticated writes only + validate required fields
+    match /cities/{cityId} {
+      allow read: if true;
+    }
+
+    // ── View events ────────────────────────────────────────────────────────
+
     match /view_events/{eventId} {
-      allow read: if isSignedIn();
+      allow read:   if isSignedIn();
       allow create: if isSignedIn()
                     && request.resource.data.keys().hasAll(["property_id", "created_at"]);
     }
@@ -40,7 +43,6 @@ service cloud.firestore {
     // ── Users / profiles ───────────────────────────────────────────────────
 
     match /users/{userId} {
-      // Own profile: full access. Public: read agent profiles only.
       allow get:    if (isSignedIn() && request.auth.uid == userId)
                     || resource.data.role == "agent";
       allow list:   if resource.data.role == "agent";
@@ -67,30 +69,78 @@ service cloud.firestore {
       allow update, delete: if isOwner("author_uid");
     }
 
+    match /agent_reviews/{reviewId} {
+      allow read:   if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isOwner("author_id");
+    }
+
     // ── Boost / campaigns ──────────────────────────────────────────────────
 
     match /boost_requests/{boostId} {
-      // Public: only fully-active campaigns are visible (list uses query constraint,
-      // get checks the document directly).
       allow get:    if resource.data.status == "active";
-      // list queries must be filtered to status == "active" by the caller
       allow list:   if isSignedIn();
       allow create: if isOwnerWrite("agent_id");
-      // Only the owner OR admin can update/delete
       allow update: if isOwner("agent_id") || isAdmin();
       allow delete: if isOwner("agent_id") || isAdmin();
+    }
+
+    match /promotion_requests/{reqId} {
+      allow read:   if isSignedIn();
+      allow create: if isOwnerWrite("agent_id");
+      allow update, delete: if isOwner("agent_id") || isAdmin();
+    }
+
+    // ── Subscriptions ──────────────────────────────────────────────────────
+
+    match /subscriptions/{subId} {
+      allow read:   if isSignedIn() && (request.auth.uid == resource.data.user_id || isAdmin());
+      allow write:  if isAdmin();
+    }
+
+    // ── Saved searches ─────────────────────────────────────────────────────
+
+    match /saved_searches/{searchId} {
+      allow read, write: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow create:      if isOwnerWrite("userId");
+    }
+
+    // ── Notifications ──────────────────────────────────────────────────────
+
+    match /notifications/{notifId} {
+      allow read, write: if isSignedIn() && request.auth.uid == resource.data.userId;
+    }
+
+    // ── Team members ───────────────────────────────────────────────────────
+
+    match /team_members/{memberId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── Reports ────────────────────────────────────────────────────────────
+
+    match /reports/{reportId} {
+      allow read:   if isAdmin();
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
+    }
+
+    // ── Webhook logs (admin only) ───────────────────────────────────────────
+
+    match /webhook_logs/{logId} {
+      allow read, write: if isAdmin();
     }
 
     // ── Analytics aggregation (read-only for clients) ──────────────────────
 
     match /property_like_agg/{propertyId} {
-      allow read: if true;
-      allow write: if false; // written only by Cloud Functions
+      allow read:  if true;
+      allow write: if false;
     }
 
     match /like_events/{eventId} {
-      allow read:   if isSignedIn();
-      allow write:  if false; // written only by Cloud Functions
+      allow read:  if isSignedIn();
+      allow write: if false;
     }
 
     // ── Favourites ─────────────────────────────────────────────────────────
@@ -99,10 +149,20 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // ── Default: deny everything not explicitly matched ────────────────────
-    // (replaces the previous permissive catch-all)
+    // ── Conversations & messages ────────────────────────────────────────────
+
+    match /conversations/{convId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /messages/{msgId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── Default: require auth for anything not explicitly matched ───────────
+
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if isSignedIn();
     }
   }
 }
