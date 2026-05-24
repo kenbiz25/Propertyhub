@@ -78,8 +78,9 @@ service cloud.firestore {
     // ── Boost / campaigns ──────────────────────────────────────────────────
 
     match /boost_requests/{boostId} {
-      allow get:    if resource.data.status == "active";
-      allow list:   if isSignedIn();
+      // Active boosts are displayed on the public homepage — readable without auth
+      allow read:   if resource.data.status == "active" || isOwner("agent_id") || isAdmin();
+      allow list:   if true;   // homepage queries with where("status","==","active")
       allow create: if isOwnerWrite("agent_id");
       allow update: if isOwner("agent_id") || isAdmin();
       allow delete: if isOwner("agent_id") || isAdmin();
