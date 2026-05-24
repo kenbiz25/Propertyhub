@@ -32,6 +32,8 @@ export default function DashboardSettings() {
     tiktok: "",
   });
 
+  const [profileVisible, setProfileVisible] = useState(true);
+
   const [notifications, setNotifications] = useState({
     email: true,
     sms: false,
@@ -64,6 +66,7 @@ export default function DashboardSettings() {
           whatsapp: data?.socials?.whatsapp ?? data?.whatsapp ?? "",
           tiktok: data?.socials?.tiktok ?? data?.tiktok ?? "",
         }));
+        setProfileVisible(data.profile_visible !== false);
         setNotifications((prev) => ({
           ...prev,
           ...data.notifications,
@@ -89,6 +92,7 @@ export default function DashboardSettings() {
         bio: profile.bio,
         location: profile.location,
         avatar_url: profile.avatar_url,
+        profile_visible: profileVisible,
         socials: {
           facebook: profile.facebook,
           instagram: profile.instagram,
@@ -168,6 +172,14 @@ export default function DashboardSettings() {
                 <InputField icon={<MessageCircle />} id="whatsapp" name="whatsapp" value={profile.whatsapp} onChange={handleProfileChange} label="WhatsApp" placeholder="+2547... or URL" />
                 <InputField icon={<Music2 />} id="tiktok" name="tiktok" value={profile.tiktok} onChange={handleProfileChange} label="TikTok" placeholder="@username or URL" />
               </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
+              <div>
+                <p className="font-medium">Show Profile on Agents Page</p>
+                <p className="text-sm text-muted-foreground">When enabled, your profile is publicly visible in the agents directory.</p>
+              </div>
+              <Switch checked={profileVisible} onCheckedChange={setProfileVisible} />
             </div>
 
             <Button onClick={handleSaveProfile}>

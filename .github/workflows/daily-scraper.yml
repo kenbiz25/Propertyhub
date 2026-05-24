@@ -1,0 +1,66 @@
+name: Daily Property Scraper
+
+on:
+  schedule:
+    # 04:00 UTC = 07:00 EAT every day
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Number of listings to scrape (overrides default of 10)'
+        required: false
+        default: '10'
+      status:
+        description: 'Listing status after save'
+        required: false
+        default: 'published'
+        type: choice
+        options:
+          - published
+          - draft
+
+jobs:
+  scrape:
+    name: Scrape & publish listings
+    runs-on: ubuntu-latest
+    timeout-minutes: 45   # 10 properties × ~3 min each = ~30 min; 45 is a safe cap
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Python setup ──────────────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: scraper/requirements.txt
+
+      # ── Install dependencies ──────────────────────────────────────────────────
+      - name: Install dependencies
+        working-directory: scraper
+        run: pip install -r requirements.txt
+
+      # ── Run scraper ───────────────────────────────────────────────────────────
+      - name: Run scraper
+        working-directory: scraper
+        env:
+          # ── OpenAI ────────────────────────────────────────────────────────────
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: gpt-4o
+
+          # ── Firebase ──────────────────────────────────────────────────────────
+          # Store the full service-account JSON as the secret FIREBASE_SERVICE_ACCOUNT_JSON
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+
+          # ── Scraper tuning ────────────────────────────────────────────────────
+          SCRAPER_AGENT_ID: scraper_bot
+          SCRAPER_DAILY_TARGET: ${{ github.event.inputs.target || '10' }}
+          SCRAPER_DEFAULT_STATUS: ${{ github.event.inputs.status || 'published' }}
+          SCRAPER_REQUEST_DELAY: '2'
+
+        run: python main.py

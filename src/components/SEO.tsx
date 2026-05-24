@@ -2,7 +2,7 @@ import { Helmet } from "react-helmet-async";
 
 const SITE_NAME = "Kenya Properties";
 const BASE_URL = "https://kenyaproperties.co.ke";
-const DEFAULT_IMAGE = `${BASE_URL}/og-image.jpg`;
+const DEFAULT_IMAGE = `${BASE_URL}/og-image.png`;
 const DEFAULT_DESCRIPTION =
   "Discover verified houses for sale & rent in Nairobi, apartments in Westlands/Kilimani, land & plots in Kiambu, Machakos, Ruiru. Free listings for agents & developers – Kenya's trusted real estate marketplace.";
 
@@ -66,6 +66,15 @@ export default function SEO({
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />
       <meta name="twitter:site" content="@Kenbiz25" />
+
+      {/* AdSense — only on indexed content pages */}
+      {!noindex && (
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8787623516632800"
+          crossOrigin="anonymous"
+        />
+      )}
 
       {/* Structured data */}
       {schemas.map((s, i) => (

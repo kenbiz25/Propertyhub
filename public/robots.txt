@@ -34,6 +34,9 @@ Disallow: /subscription/
 Disallow: /report
 Disallow: /delete-account
 Disallow: /unauthorized
+Disallow: /subscription/success
+Disallow: /subscription/failed
+Disallow: /subscription/cancel
 
 Sitemap: https://kenyaproperties.co.ke/sitemap.xml
 

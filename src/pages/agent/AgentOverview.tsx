@@ -217,12 +217,6 @@ export default function AgentOverview() {
                 Add New Property
               </Button>
             </Link>
-            <Link to="/messages" className="block">
-              <Button className="w-full justify-start" variant="outline">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                View Messages
-              </Button>
-            </Link>
           </div>
         </div>
       </div>

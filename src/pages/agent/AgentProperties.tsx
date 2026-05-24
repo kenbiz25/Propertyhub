@@ -1,7 +1,7 @@
 
 // src/pages/agent/AgentProperties.tsx
 import React, { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, Filter, Search, LayoutGrid, Table } from "lucide-react";
 
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -47,6 +47,7 @@ interface AgentPropertiesProps {
 }
 
 export default function AgentProperties({ basePath = "/agent" }: AgentPropertiesProps) {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -251,12 +252,6 @@ export default function AgentProperties({ basePath = "/agent" }: AgentProperties
             </Button>
           </div>
 
-          <Link to={`${basePath}/properties/new`}>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Property
-            </Button>
-          </Link>
         </div>
       </div>
 
@@ -276,9 +271,7 @@ export default function AgentProperties({ basePath = "/agent" }: AgentProperties
               image: p.image,
             }))}
             getBoostHref={(row) => `${basePath}/boost/${row.id}`}
-            onEdit={(row) =>
-              (window.location.href = `${basePath}/properties/${row.id}/edit`)
-            }
+            onEdit={(row) => navigate(`${basePath}/properties/${row.id}/edit`)}
             onDelete={(row) => handleDelete(row.id, row.title)}
             onPublish={(row) => handlePublish(row.id)}
             onPause={(row) => handlePause(row.id)}
@@ -300,13 +293,11 @@ export default function AgentProperties({ basePath = "/agent" }: AgentProperties
                   image: p.image,
                 }}
                 boostHref={`${basePath}/boost/${p.id}`}
-                onEdit={() =>
-                  (window.location.href = `${basePath}/properties/${p.id}/edit`)
-                }
+                onEdit={() => navigate(`${basePath}/properties/${p.id}/edit`)}
                 onDelete={() => handleDelete(p.id, p.title)}
                 onPublish={() => handlePublish(p.id)}
                 onPause={() => handlePause(p.id)}
-                onView={() => (window.location.href = `/listing/${p.id}`)}
+                onView={() => navigate(`/listing/${p.id}`)}
               />
             ))}
           </div>
@@ -316,7 +307,7 @@ export default function AgentProperties({ basePath = "/agent" }: AgentProperties
           <p className="text-muted-foreground mb-4">
             No properties found matching your criteria.
           </p>
-          <Link to={`${basePath}/properties/new`}>
+          <Link to={`${basePath}/list-property`}>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
               Add Your First Property

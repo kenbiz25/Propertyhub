@@ -4,8 +4,8 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Heart, Share2, MapPin, Bed, Bath, Square, Car,
   Wifi, AirVent, Shield, Waves, Trees, ChevronLeft, ChevronRight,
-  CheckCircle, Star, MessageCircle, Download,
-  Facebook, Twitter, Link2, Instagram, Music2
+  CheckCircle, Star, MessageCircle, Download, Phone,
+  Facebook, Twitter, Link2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +42,16 @@ const amenityIconMap: Record<string, React.ComponentType<{ className?: string }>
 
 // ---------- Utils ----------
 const formatPrice = (price: number) => new Intl.NumberFormat("en-KE").format(Number(price || 0));
+
+// Normalise any phone string to international digits for wa.me and tel: links
+const toE164Digits = (phone?: string | null): string => {
+  if (!phone) return "";
+  const digits = phone.replace(/[^0-9]/g, "");
+  if (digits.startsWith("254") && digits.length >= 12) return digits;
+  if (digits.startsWith("0") && digits.length >= 9) return "254" + digits.slice(1);
+  if (digits.length >= 9) return "254" + digits;
+  return digits;
+};
 
 const toReview = (d: any, id: string): Review => ({
   id,
@@ -97,7 +107,7 @@ const ListingDetail = () => {
             title: d?.title ?? "Untitled",
             description: d?.description ?? "",
             price: Number(d?.price ?? 0),
-            type: d?.type ?? "sale",
+            type: d?.listing_type ?? d?.type ?? "sale",
             city: d?.city ?? d?.location ?? "",
             neighborhood: d?.neighborhood ?? "",
             address: d?.address ?? d?.location ?? "",
@@ -111,8 +121,10 @@ const ListingDetail = () => {
             promoted: Boolean(d?.featured ?? d?.promoted ?? false),
             images: images.length ? images : DEFAULT_IMAGES,
             video_urls: Array.isArray(d?.video_urls) ? d.video_urls : (Array.isArray(d?.videos) ? d.videos : []),
+            embed_urls: Array.isArray(d?.embed_urls) ? d.embed_urls : [],
             amenities,
             agent,
+            contact_phone: d?.contact_phone ?? null,
             lat: Number(d?.lat ?? 0),
             lng: Number(d?.lng ?? 0),
           };
@@ -256,6 +268,11 @@ const ListingDetail = () => {
     [listing]
   );
 
+  const embedUrls = useMemo(
+    () => (Array.isArray(listing?.embed_urls) ? listing.embed_urls.filter(Boolean).slice(0, 5) : []),
+    [listing]
+  );
+
   const getYouTubeEmbedUrl = (url: string) => {
     try {
       const u = new URL(url);
@@ -269,6 +286,27 @@ const ListingDetail = () => {
     } catch {
       return url;
     }
+  };
+
+  // Load Instagram embed.js once when instagram embeds are present
+  useEffect(() => {
+    if (embedUrls.some((u) => /instagram\.com/.test(u))) {
+      if ((window as any).instgrm) {
+        (window as any).instgrm.Embeds.process();
+      } else {
+        const s = document.createElement("script");
+        s.src = "https://www.instagram.com/embed.js";
+        s.async = true;
+        s.onload = () => (window as any).instgrm?.Embeds.process();
+        document.body.appendChild(s);
+      }
+    }
+  }, [embedUrls]);
+
+  const getEmbedType = (url: string): "youtube" | "instagram" | "unknown" => {
+    if (/youtu\.?be/.test(url)) return "youtube";
+    if (/instagram\.com/.test(url)) return "instagram";
+    return "unknown";
   };
 
   const shareListing = async () => {
@@ -287,7 +325,7 @@ const ListingDetail = () => {
   };
 
   const handleContactAgent = () => {
-    const waNumber = listing?.agent_whatsapp?.replace(/[^0-9]/g, "") || "254705091683";
+    const waNumber = toE164Digits(listing?.contact_phone) || "254705091683";
     const text = encodeURIComponent(`Hi, I'm interested in your property: ${listing?.title ?? ""}`);
     window.open(`https://wa.me/${waNumber}?text=${text}`, "_blank", "noopener,noreferrer");
   };
@@ -306,11 +344,9 @@ const ListingDetail = () => {
     const url = encodeURIComponent(window.location.href);
     const text = encodeURIComponent(`${listing.title} on Kenya Properties`);
     return [
-      { label: "Instagram", href: `https://www.instagram.com/`, Icon: Instagram },
       { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${url}`, Icon: Facebook },
-      { label: "Twitter", href: `https://twitter.com/intent/tweet?text=${text}&url=${url}`, Icon: Twitter },
+      { label: "X / Twitter", href: `https://twitter.com/intent/tweet?text=${text}&url=${url}`, Icon: Twitter },
       { label: "WhatsApp", href: `https://wa.me/?text=${text}%20${url}`, Icon: MessageCircle },
-      { label: "TikTok", href: `https://www.tiktok.com/`, Icon: Music2 },
     ];
   }, [listing]);
 
@@ -597,10 +633,35 @@ const ListingDetail = () => {
                   <p className="font-display text-3xl font-bold text-primary mb-4">
                     KES {formatPrice(listing.price)}
                   </p>
-                  <Button className="w-full bg-green-600 hover:bg-green-700" size="lg" onClick={handleContactAgent}>
-                    <MessageCircle className="w-5 h-5 mr-2" />
-                    WhatsApp Agent
-                  </Button>
+                  {user ? (
+                    listing.contact_phone ? (
+                      <div className="flex gap-3">
+                        <a
+                          href={`tel:+${toE164Digits(listing.contact_phone)}`}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+                        >
+                          <Phone className="w-4 h-4" />
+                          Call
+                        </a>
+                        <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={handleContactAgent}>
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          WhatsApp
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button className="w-full bg-green-600 hover:bg-green-700" size="lg" onClick={handleContactAgent}>
+                        <MessageCircle className="w-5 h-5 mr-2" />
+                        WhatsApp Agent
+                      </Button>
+                    )
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground text-center">Sign in to view contact details</p>
+                      <Button asChild className="w-full" variant="outline">
+                        <Link to={`/auth?from=/listing/${listing.id}`}>Sign In</Link>
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -668,18 +729,71 @@ const ListingDetail = () => {
                   <div className="glass-card rounded-2xl p-6">
                     <h2 className="font-display text-xl font-semibold mb-4">Video Tour</h2>
                     <div className="grid md:grid-cols-2 gap-4">
-                      {videoUrls.map((url: string, index: number) => (
-                        <div key={index} className="aspect-video rounded-xl overflow-hidden bg-muted/50">
-                          <iframe
-                            src={getYouTubeEmbedUrl(url)}
-                            className="w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            loading="lazy"
-                            title={`Video tour ${index + 1}`}
-                          />
-                        </div>
-                      ))}
+                      {videoUrls.map((url: string, index: number) => {
+                        const isYoutube = /youtu\.?be/.test(url);
+                        return (
+                          <div key={index} className="aspect-video rounded-xl overflow-hidden bg-muted/50">
+                            {isYoutube ? (
+                              <iframe
+                                src={getYouTubeEmbedUrl(url)}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                loading="lazy"
+                                title={`Video tour ${index + 1}`}
+                              />
+                            ) : (
+                              <video
+                                src={url}
+                                controls
+                                className="w-full h-full object-cover"
+                                title={`Video tour ${index + 1}`}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* YouTube / Instagram Embeds */}
+                {embedUrls.length > 0 && (
+                  <div className="glass-card rounded-2xl p-6">
+                    <h2 className="font-display text-xl font-semibold mb-4">Media</h2>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {embedUrls.map((url: string, index: number) => {
+                        const type = getEmbedType(url);
+                        if (type === "youtube") {
+                          return (
+                            <div key={index} className="aspect-video rounded-xl overflow-hidden bg-muted/50">
+                              <iframe
+                                src={getYouTubeEmbedUrl(url)}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                loading="lazy"
+                                title={`YouTube ${index + 1}`}
+                              />
+                            </div>
+                          );
+                        }
+                        if (type === "instagram") {
+                          const permalink = url.replace(/\/?$/, "/");
+                          return (
+                            <div key={index} className="flex justify-center rounded-xl overflow-hidden bg-muted/50 p-2">
+                              <blockquote
+                                className="instagram-media"
+                                data-instgrm-captioned
+                                data-instgrm-permalink={permalink}
+                                data-instgrm-version="14"
+                                style={{ background: "#fff", border: 0, margin: "0 auto", maxWidth: 540, width: "100%" }}
+                              />
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
                     </div>
                   </div>
                 )}
@@ -796,13 +910,35 @@ const ListingDetail = () => {
                     </div>
                   </div>
 
-                  <Button className="w-full mb-4 bg-green-600 hover:bg-green-700" onClick={handleContactAgent}>
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    WhatsApp Agent
-                  </Button>
-                  <div className="text-sm text-muted-foreground">
-                    You'll be connected via WhatsApp to discuss this property.
-                  </div>
+                  {user ? (
+                    listing.contact_phone ? (
+                      <div className="space-y-3">
+                        <a
+                          href={`tel:+${toE164Digits(listing.contact_phone)}`}
+                          className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-border bg-muted/40 px-4 py-2 text-sm font-semibold hover:bg-muted"
+                        >
+                          <Phone className="w-4 h-4" />
+                          {listing.contact_phone}
+                        </a>
+                        <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleContactAgent}>
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          WhatsApp Agent
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleContactAgent}>
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        WhatsApp Agent
+                      </Button>
+                    )
+                  ) : (
+                    <div className="space-y-2 text-center">
+                      <p className="text-sm text-muted-foreground">Sign in to view agent contact details</p>
+                      <Button asChild className="w-full" variant="outline">
+                        <Link to={`/auth?from=/listing/${listing.id}`}>Sign In to Contact</Link>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

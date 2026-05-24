@@ -54,11 +54,11 @@ service cloud.firestore {
     // ── Properties ─────────────────────────────────────────────────────────
 
     match /properties/{propertyId} {
-      allow get:    if isPublishedProperty() || isOwner("agent_id");
-      allow list:   if isPublishedProperty() || isOwner("agent_id");
-      allow create: if isOwnerWrite("agent_id");
-      allow update: if isOwner("agent_id");
-      allow delete: if isOwner("agent_id");
+      allow get:    if isPublishedProperty() || isOwner("agent_id") || isAdmin();
+      allow list:   if isPublishedProperty() || isOwner("agent_id") || isAdmin();
+      allow create: if isOwnerWrite("agent_id") || isAdmin();
+      allow update: if isOwner("agent_id") || isAdmin();
+      allow delete: if isOwner("agent_id") || isAdmin();
     }
 
     // ── Reviews ────────────────────────────────────────────────────────────
@@ -111,10 +111,13 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
 
-    // ── Team members ───────────────────────────────────────────────────────
+    // ── Team members — agents & admins only ───────────────────────────────
 
     match /team_members/{memberId} {
-      allow read, write: if isSignedIn();
+      allow read:  if isSignedIn() && (
+                     request.auth.token.role in ['agent', 'admin', 'superadmin']
+                   );
+      allow write: if isAdmin();
     }
 
     // ── Reports ────────────────────────────────────────────────────────────
@@ -149,20 +152,32 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // ── Conversations & messages ────────────────────────────────────────────
+    // ── Conversations & messages — participants only ───────────────────────
 
     match /conversations/{convId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if isSignedIn() && (
+                           request.auth.uid in resource.data.participant_ids
+                           || isAdmin()
+                         );
+      allow create: if isSignedIn()
+                    && request.auth.uid in request.resource.data.participant_ids;
     }
 
     match /messages/{msgId} {
-      allow read, write: if isSignedIn();
+      allow read:   if isSignedIn() && (
+                      request.auth.uid == resource.data.sender_id
+                      || request.auth.uid == resource.data.recipient_id
+                      || isAdmin()
+                    );
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.sender_id;
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.sender_id;
     }
 
-    // ── Default: require auth for anything not explicitly matched ───────────
+    // ── Default: deny everything not explicitly matched ────────────────────
+    // IMPORTANT: deny-by-default prevents accidental exposure of new collections.
 
     match /{document=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if false;
     }
   }
 }

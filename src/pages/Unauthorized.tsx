@@ -1,9 +1,11 @@
 
 // src/pages/Unauthorized.tsx
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 export default function Unauthorized() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
+      <SEO title="Unauthorized" noindex={true} />
       <h1 className="text-3xl font-bold mb-4">Unauthorized</h1>
       <p className="text-gray-600 mb-6">
         You do not have permission to access this page.

@@ -3,10 +3,12 @@ import Navbar from "@/components/layouts/Navbar";
 import Footer from "@/components/layouts/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 
 export default function SubscribeCancel() {
   return (
     <div className="min-h-screen bg-background">
+      <SEO title="Subscription Canceled" noindex={true} />
       <Navbar />
       <main className="container mx-auto px-4 py-16">
         <div className="max-w-xl mx-auto glass-card rounded-2xl p-6 text-center">

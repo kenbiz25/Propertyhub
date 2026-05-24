@@ -3,10 +3,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { withRoleGuard } from '../../components/auth/withRoleGuard';
+import SEO from "@/components/SEO";
 
 function PaymentFailed() {
   return (
     <div className="max-w-lg mx-auto p-6">
+      <SEO title="Payment Failed" noindex={true} />
       <h1 className="text-xl font-semibold text-red-700">Payment Failed</h1>
       <p className="mt-2 text-sm text-gray-600">
         Your payment did not complete. Please try again or contact support.

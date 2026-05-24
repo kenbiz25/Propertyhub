@@ -1,5 +1,4 @@
 
-import React from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -45,83 +44,69 @@ const PropertyCard = ({ property }: { property: UIProperty }) => {
   return (
     <Link
       to={`/listing/${property.id}`}
-      className="group block glass-card rounded-2xl overflow-hidden hover-lift"
+      className="group glass-card rounded-2xl overflow-hidden hover-lift"
     >
       {/* Image */}
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-[4/3]">
         <img
           src={property.image}
           alt={property.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-        {/* Badges */}
-        <div className="absolute top-4 left-4 flex gap-2">
-          {property.isPromoted && (
-            <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center gap-1">
-              <Star className="w-3 h-3" />
-              Featured
-            </span>
-          )}
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              property.type === "sale"
-                ? "bg-green-500/90 text-white"
-                : property.type === "rent"
-                ? "bg-blue-500/90 text-white"
-                : "bg-purple-500/90 text-white"
-            }`}
-          >
-            For {property.type.charAt(0).toUpperCase() + property.type.slice(1)}
+        {property.isPromoted && (
+          <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center gap-1">
+            <Star className="w-3 h-3" />
+            Featured
           </span>
-        </div>
+        )}
 
-        {/* Favorite button */}
-        <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-background transition-all">
-          <Heart className="w-5 h-5" />
+        <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-muted-foreground hover:text-primary transition-all">
+          <Heart className="w-4 h-4" />
         </button>
 
-        {/* Price tag */}
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="inline-block px-4 py-2 rounded-lg bg-background/90 backdrop-blur-sm">
-            <span className="font-display text-xl font-bold text-foreground">
-              {formatPrice(property.price, property.currency)}
-            </span>
-            {property.type === "rent" && (
-              <span className="text-muted-foreground text-sm">/month</span>
-            )}
-          </div>
+        <div className="absolute bottom-3 left-3">
+          <span className="inline-block px-2 py-0.5 bg-background/80 backdrop-blur-sm text-xs font-medium rounded capitalize">
+            For {property.type}
+          </span>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-5">
-        <h3 className="font-display font-semibold text-lg mb-2 group-hover:text-primary transition-colors line-clamp-1">
+      <div className="p-4">
+        <h3 className="font-display font-semibold text-sm mb-1 group-hover:text-primary transition-colors line-clamp-1">
           {property.title}
         </h3>
 
-        <div className="flex items-center gap-1 text-muted-foreground text-sm mb-4 line-clamp-1">
-          <MapPin className="w-4 h-4 text-primary" />
+        <div className="flex items-center gap-1 text-muted-foreground text-xs mb-2 line-clamp-1">
+          <MapPin className="w-3 h-3" />
           {property.address}
         </div>
 
-        {/* Features */}
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
           {property.bedrooms > 0 && (
             <div className="flex items-center gap-1">
-              <Bed className="w-4 h-4" />
-              {property.bedrooms} Beds
+              <Bed className="w-3 h-3" />
+              {property.bedrooms}
             </div>
           )}
           <div className="flex items-center gap-1">
-            <Bath className="w-4 h-4" />
-            {property.bathrooms} Baths
+            <Bath className="w-3 h-3" />
+            {property.bathrooms}
           </div>
           <div className="flex items-center gap-1">
-            <Square className="w-4 h-4" />
+            <Square className="w-3 h-3" />
             {property.area} m²
           </div>
+        </div>
+
+        <div className="pt-3 border-t border-border">
+          <p className="font-display font-bold text-base text-primary">
+            {formatPrice(property.price, property.currency)}
+            {property.type === "rent" && <span className="text-xs text-muted-foreground font-normal">/mo</span>}
+          </p>
         </div>
       </div>
     </Link>
@@ -142,7 +127,7 @@ function toUIProperty(d: any, id: string): UIProperty {
     title: d?.title ?? "Untitled",
     price: Number(d?.price ?? 0),
     currency: d?.currency ?? "KES",
-    type: (d?.type as UIProperty["type"]) ?? "sale",
+    type: (d?.listing_type ?? d?.type ?? "sale") as UIProperty["type"],
     city: d?.city ?? "Nairobi",
     address: d?.address ?? d?.location ?? "Nairobi, Kenya",
     bedrooms: Number(d?.bedrooms ?? 0),
@@ -173,7 +158,7 @@ async function fetchFeatured(): Promise<UIProperty[]> {
 
   const topIds = Array.from(counts.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
+    .slice(0, 8)
     .map(([id]) => id);
 
   if (topIds.length === 0) return [];
@@ -219,8 +204,8 @@ const FeaturedListings = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="glass-card rounded-2xl overflow-hidden border animate-pulse">
                 <div className="aspect-[4/3] bg-muted" />
                 <div className="p-5">
@@ -280,7 +265,7 @@ const FeaturedListings = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {items.map((property) => (
               <PropertyCard key={property.id} property={property} />
             ))}

@@ -4,6 +4,7 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -79,7 +80,9 @@ export default function ListProperty() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<File[]>([]);
-  const [videoUrls, setVideoUrls] = useState<string[]>(["", ""]);
+  const [anchorIndex, setAnchorIndex] = useState<number>(0);
+  const [videoFiles, setVideoFiles] = useState<File[]>([]);
+  const [embedUrls, setEmbedUrls] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     title: "",
@@ -94,6 +97,7 @@ export default function ListProperty() {
     bedrooms: "",
     bathrooms: "",
     size_sqm: "",
+    contact_phone: "",
   });
 
   const { data: cityOptions = [] } = useCities(form.country);
@@ -106,10 +110,7 @@ export default function ListProperty() {
       if (parsed?.form) {
         setForm((s) => ({ ...s, ...parsed.form }));
       }
-      if (Array.isArray(parsed?.videoUrls)) {
-        setVideoUrls(parsed.videoUrls);
-      }
-      toast.info("Recovered a draft. Please re-upload images before publishing.");
+      toast.info("Recovered a draft. Please re-upload images and videos before publishing.");
     } catch {
       // ignore invalid draft
     }
@@ -118,23 +119,18 @@ export default function ListProperty() {
   useEffect(() => {
     const id = window.setTimeout(() => {
       try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, videoUrls }));
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ form }));
       } catch {
         // ignore storage errors
       }
     }, 500);
     return () => window.clearTimeout(id);
-  }, [form, videoUrls]);
+  }, [form]);
 
   const imagePreviews = useMemo(
     () => images.map((f) => URL.createObjectURL(f)),
     [images]
   );
-
-  const cleanedVideos = videoUrls
-    .map((v) => v.trim())
-    .filter(Boolean)
-    .slice(0, 5);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,10 +144,6 @@ export default function ListProperty() {
       toast.error("Please upload at least one image.");
       return;
     }
-    if (cleanedVideos.length > 0 && (cleanedVideos.length < 2 || cleanedVideos.length > 5)) {
-      toast.error("Please provide between 2 and 5 YouTube video links.");
-      return;
-    }
 
     try {
       setLoading(true);
@@ -161,11 +153,13 @@ export default function ListProperty() {
         return;
       }
 
+      let wasCustomer = false;
       await runTransaction(db, async (tx) => {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await tx.get(userRef);
         const userData = userSnap.data() as any;
         if (userData?.role !== "agent") {
+          wasCustomer = true;
           const counterRef = doc(db, "meta", "agent_codes");
           const counterSnap = await tx.get(counterRef);
           const next = Number(counterSnap.data()?.next_code ?? 1) || 1;
@@ -190,34 +184,53 @@ export default function ListProperty() {
         bedrooms: form.bedrooms ? Number(form.bedrooms) : null,
         bathrooms: form.bathrooms ? Number(form.bathrooms) : null,
         size_sqm: form.size_sqm ? Number(form.size_sqm) : null,
+        contact_phone: form.contact_phone.trim() || null,
         agent_id: user.uid,
         status: "draft",
-        video_urls: cleanedVideos,
         created_at: serverTimestamp(),
       });
 
-      const uploadedUrls = await Promise.all(
+      const uploadedImageUrls = await Promise.all(
         images.map(async (file, index) => {
           const watermarked = await applyWatermark(file, "/hh.png");
-          const storageRef = ref(storage, `properties/${user.uid}/${propertyRef.id}/${index}.jpg`);
+          const storageRef = ref(storage, `properties/${user.uid}/${propertyRef.id}/img_${index}.jpg`);
           await uploadBytes(storageRef, watermarked, { contentType: "image/jpeg" });
           return getDownloadURL(storageRef);
         })
       );
 
+      const uploadedVideoUrls = await Promise.all(
+        videoFiles.map(async (file, index) => {
+          const storageRef = ref(storage, `properties/${user.uid}/${propertyRef.id}/vid_${index}_${file.name}`);
+          await uploadBytes(storageRef, file, { contentType: file.type });
+          return getDownloadURL(storageRef);
+        })
+      );
+
+      const safeAnchor = anchorIndex < uploadedImageUrls.length ? anchorIndex : 0;
+      const cleanedEmbeds = embedUrls.map((u) => u.trim()).filter(Boolean);
       await updateDoc(doc(db, "properties", propertyRef.id), {
-        image_urls: uploadedUrls,
-        thumbnail_url: uploadedUrls[0] ?? null,
-        image: uploadedUrls[0] ?? null,
+        image_urls: uploadedImageUrls,
+        thumbnail_url: uploadedImageUrls[safeAnchor] ?? null,
+        image: uploadedImageUrls[safeAnchor] ?? null,
+        anchor_image_index: safeAnchor,
+        video_urls: uploadedVideoUrls,
+        embed_urls: cleanedEmbeds,
         status: "published",
-        published: true,          // required for browse/search query
+        published: true,
       });
 
       toast.success("Property listed successfully.");
       try {
         localStorage.removeItem(DRAFT_KEY);
       } catch {}
-      navigate("/agent/properties");
+
+      if (wasCustomer) {
+        // Force a full reload so auth context picks up the new role
+        window.location.href = "/agent";
+      } else {
+        navigate("/agent/properties");
+      }
     } catch (err: any) {
       console.error("[ListProperty] error:", err);
       toast.error(err?.message ?? "Failed to create listing.");
@@ -395,6 +408,19 @@ export default function ListProperty() {
         </div>
 
         <div className="space-y-2">
+          <label className="text-sm text-muted-foreground">Contact Phone Number *</label>
+          <Input
+            type="tel"
+            value={form.contact_phone}
+            onChange={(e) => setForm((s) => ({ ...s, contact_phone: e.target.value }))}
+            placeholder="0712345678 or +254712345678"
+          />
+          <p className="text-xs text-muted-foreground">
+            This number is shown to logged-in customers as both a call and WhatsApp link.
+          </p>
+        </div>
+
+        <div className="space-y-2">
           <label className="text-sm text-muted-foreground">Property Images (watermarked)</label>
           <Input
             type="file"
@@ -405,55 +431,134 @@ export default function ListProperty() {
               const result = validateImages(selected);
               if (!result.ok) { toast.error(result.error); e.target.value = ""; return; }
               setImages(selected);
+              setAnchorIndex(0);
             }}
           />
           {imagePreviews.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
               {imagePreviews.map((src, idx) => (
-                <img key={idx} src={src} alt="preview" className="h-24 w-full object-cover rounded-lg" />
+                <div key={idx} className="relative">
+                  <img src={src} alt="preview" className={`h-24 w-full object-cover rounded-lg ${anchorIndex === idx ? "ring-2 ring-primary" : ""}`} />
+                  <label className="absolute bottom-1 left-1 flex items-center gap-1 bg-background/80 rounded px-1 py-0.5 cursor-pointer text-xs">
+                    <Checkbox
+                      checked={anchorIndex === idx}
+                      onCheckedChange={() => setAnchorIndex(idx)}
+                    />
+                    Cover
+                  </label>
+                </div>
               ))}
             </div>
           )}
           <p className="text-xs text-muted-foreground">
-            Images will be watermarked automatically to prevent reuse.
+            Images will be watermarked automatically. Check "Cover" on the image to use as the front-page thumbnail.
           </p>
         </div>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm text-muted-foreground">YouTube Video Links (2–5)</label>
+            <label className="text-sm text-muted-foreground">Property Videos (optional, up to 5)</label>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => setVideoUrls((v) => (v.length >= 5 ? v : [...v, ""]))}
-              disabled={videoUrls.length >= 5}
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "video/*";
+                input.multiple = true;
+                input.onchange = () => {
+                  const files = Array.from(input.files ?? []);
+                  setVideoFiles((v) => [...v, ...files].slice(0, 5));
+                };
+                input.click();
+              }}
+              disabled={videoFiles.length >= 5}
             >
-              <Plus className="w-4 h-4 mr-1" /> Add Video
+              <Plus className="w-4 h-4 mr-1" /> Add Videos
             </Button>
           </div>
-          <div className="space-y-2">
-            {videoUrls.map((value, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <Input
-                  value={value}
-                  onChange={(e) =>
-                    setVideoUrls((v) => v.map((item, i) => (i === index ? e.target.value : item)))
-                  }
-                  placeholder="https://www.youtube.com/watch?v=..."
-                />
-                {videoUrls.length > 2 && (
+          {videoFiles.length > 0 && (
+            <div className="space-y-2">
+              {videoFiles.map((file, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                  <span className="flex-1 text-sm truncate">{file.name}</span>
+                  <span className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
                   <Button
                     type="button"
                     size="icon"
                     variant="ghost"
-                    onClick={() => setVideoUrls((v) => v.filter((_, i) => i !== index))}
+                    onClick={() => setVideoFiles((v) => v.filter((_, i) => i !== index))}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
-                )}
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">Upload video files directly (MP4, MOV, etc.).</p>
+        </div>
+
+        {/* Embed Videos (YouTube / Instagram) */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium">Embed Videos</label>
+              <p className="text-xs text-muted-foreground mt-0.5">YouTube or Instagram post/reel links (max 5)</p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setEmbedUrls((v) => (v.length >= 5 ? v : [...v, ""]))}
+              disabled={embedUrls.length >= 5}
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add Link
+            </Button>
+          </div>
+
+          {embedUrls.length === 0 && (
+            <div className="border border-dashed border-border rounded-lg p-4 text-center text-xs text-muted-foreground">
+              No embed links added yet. Click "Add Link" to add a YouTube or Instagram URL.
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {embedUrls.map((url, index) => {
+              const isYT = /youtu\.?be/.test(url);
+              const isIG = /instagram\.com/.test(url);
+              const badge = isYT ? "YouTube" : isIG ? "Instagram" : url ? "Unknown" : null;
+              const badgeColor = isYT
+                ? "bg-red-500/10 text-red-400"
+                : isIG
+                ? "bg-purple-500/10 text-purple-400"
+                : "bg-yellow-500/10 text-yellow-400";
+
+              return (
+                <div key={index} className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 border border-border">
+                  {badge && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${badgeColor}`}>
+                      {badge}
+                    </span>
+                  )}
+                  <Input
+                    value={url}
+                    onChange={(e) => setEmbedUrls((v) => v.map((item, i) => (i === index ? e.target.value : item)))}
+                    placeholder="https://www.youtube.com/watch?v=... or https://www.instagram.com/p/..."
+                    className="border-0 bg-transparent focus-visible:ring-0 h-8 px-1"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="shrink-0 h-7 w-7 text-muted-foreground hover:text-red-500"
+                    onClick={() => setEmbedUrls((v) => v.filter((_, i) => i !== index))}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         </div>
 

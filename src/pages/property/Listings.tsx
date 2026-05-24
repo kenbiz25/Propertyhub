@@ -67,7 +67,7 @@ function toListingRow(d: any, id: string): ListingRow {
     id,
     title: d?.title ?? "Untitled",
     price: Number(d?.price ?? 0),
-    type: (d?.type ?? d?.listing_type ?? "sale") as ListingRow["type"],
+    type: (d?.listing_type ?? d?.type ?? "sale") as ListingRow["type"],
     property_type: d?.property_type ?? undefined,
     city: d?.city ?? "",
     neighborhood: d?.neighborhood ?? "",

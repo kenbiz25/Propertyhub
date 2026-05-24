@@ -42,7 +42,9 @@ async function fetchAgents(): Promise<Agent[]> {
   const agentsQ = fsQuery(collection(db, "users"), where("role", "==", "agent"));
   const agentsSnap = await getDocs(agentsQ);
 
-  const agents = agentsSnap.docs.map((d) => {
+  const agents = agentsSnap.docs
+    .filter((d) => d.data()?.profile_visible !== false)
+    .map((d) => {
     const data = d.data() as any;
     const name = data?.full_name ?? data?.name ?? data?.displayName ?? "Agent";
     const location = data?.city ?? data?.location ?? data?.country ?? "";

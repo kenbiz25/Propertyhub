@@ -10,7 +10,6 @@ import RequireAuth from "@/components/auth/RequireAuth";
 import { withRoleGuard } from "@/components/auth/withRoleGuard";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import CookieConsent from "@/components/layouts/CookieConsent";
-import WhatsAppSupport from "@/components/layouts/WhatsAppSupport";
 
 // Top-level pages
 import Auth from "@/pages/auth/Auth";
@@ -38,6 +37,7 @@ const TeamMembers = lazy(() => import("@/pages/agent/TeamMembers"));
 const PromotionRequests = lazy(() => import("@/pages/agent/PromotionRequests"));
 const AgentProfile = lazy(() => import("@/pages/agent/AgentProfile"));
 const ListPropertyAgent = lazy(() => import("@/pages/agent/ListProperty"));
+const EditPropertyAgent = lazy(() => import("@/pages/agent/EditProperty"));
 const BoostPricing = lazy(() => import("@/pages/agent/BoostPricing"));
 const BoostListing = lazy(() => import("@/pages/agent/BoostListing"));
 
@@ -177,6 +177,16 @@ const routes = [
       <RequireAuth>
         <DashboardLayout>
           <Suspense fallback={<Loader />}><ListPropertyAgent /></Suspense>
+        </DashboardLayout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/agent/properties/:id/edit",
+    element: (
+      <RequireAuth>
+        <DashboardLayout>
+          <Suspense fallback={<Loader />}><EditPropertyAgent /></Suspense>
         </DashboardLayout>
       </RequireAuth>
     ),
@@ -355,7 +365,6 @@ export default function AppRouter() {
           <Toaster />
           <Sonner />
           <CookieConsent />
-          <WhatsAppSupport />
           <RouterProvider router={router} />
         </TooltipProvider>
       </QueryClientProvider>
