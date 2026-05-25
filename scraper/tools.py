@@ -66,22 +66,29 @@ def _get_extractor() -> ChatOpenAI:
 # ── Source site definitions ────────────────────────────────────────────────────
 
 SOURCES = {
-    "BuyRentKenya": [
-        "https://www.buyrentkenya.com/houses-for-sale",
-        "https://www.buyrentkenya.com/apartments-for-rent",
-        "https://www.buyrentkenya.com/land-for-sale",
+    # Classifieds — server-rendered HTML, light bot protection, lots of fresh listings
+    "JijiKenya": [
+        "https://jiji.co.ke/nairobi/houses-apartments-for-rent",
+        "https://jiji.co.ke/nairobi/houses-apartments-for-sale",
+        "https://jiji.co.ke/nairobi/land-and-plots-for-sale",
+        "https://jiji.co.ke/mombasa/houses-apartments-for-rent",
     ],
-    "PigiaMe": [
-        "https://www.pigiame.co.ke/real-estate",
-        "https://www.pigiame.co.ke/real-estate/houses-for-sale-nairobi",
+    "OLXKenya": [
+        "https://www.olx.co.ke/real-estate_c1368",
+        "https://www.olx.co.ke/houses-apartments-for-rent_c1370",
+        "https://www.olx.co.ke/houses-apartments-for-sale_c1371",
     ],
+    # Independent Kenyan agency sites — simple HTML, no bot protection
+    "KenyaAgents": [
+        "https://www.landlord.co.ke/properties",
+        "https://www.housesinkenya.co.ke/listings",
+        "https://www.rentals.co.ke/properties",
+        "https://www.kenyahomes.com/listings",
+    ],
+    # Established portal — property-for-sale was returning 200 OK
     "Property24": [
         "https://www.property24.co.ke/property-for-sale",
         "https://www.property24.co.ke/property-to-rent",
-    ],
-    "JumiaHouse": [
-        "https://www.jumia.co.ke/real-estate/houses-for-sale/",
-        "https://www.jumia.co.ke/real-estate/apartments-for-rent/",
     ],
 }
 
@@ -151,10 +158,10 @@ def get_listing_urls(source_name: str) -> str:
 
     # Heuristic path fragments that appear in property detail URLs
     hints_by_site = {
-        "BuyRentKenya": ["/listing/", "/property/", "/listings/", "/house", "/apartment", "/land"],
-        "PigiaMe": ["/item/", "/ad/", "/property/", "/houses/", "/real-estate/"],
-        "Property24": ["/property-details/", "/for-sale/", "/to-rent/", "/listing/", "/property-for-sale", "/property-to-rent"],
-        "JumiaHouse": ["/real-estate/", "/property/", "/house/", "/apartment/"],
+        "JijiKenya":   ["/houses-apartments-for-rent/", "/houses-apartments-for-sale/", "/land-and-plots-for-sale/"],
+        "OLXKenya":    ["/item/", "/ad/"],
+        "KenyaAgents": ["/listing/", "/property/", "/properties/", "/house/", "/apartment/", "/land/"],
+        "Property24":  ["/property-details/", "/for-sale/", "/to-rent/", "/listing/"],
     }
     hints = hints_by_site.get(source_name, ["/listing/", "/property/", "/item/", "/ad/"])
 
