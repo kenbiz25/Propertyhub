@@ -33,8 +33,18 @@ HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/124.0.0.0 Safari/537.36"
     ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
 }
 
 REQUEST_DELAY = float(os.environ.get("SCRAPER_REQUEST_DELAY", "2"))
@@ -57,13 +67,13 @@ def _get_extractor() -> ChatOpenAI:
 
 SOURCES = {
     "BuyRentKenya": [
-        "https://www.buyrentkenya.com/listings",
-        "https://www.buyrentkenya.com/listings?listingType=for-sale",
-        "https://www.buyrentkenya.com/listings?listingType=for-rent",
+        "https://www.buyrentkenya.com/houses-for-sale",
+        "https://www.buyrentkenya.com/apartments-for-rent",
+        "https://www.buyrentkenya.com/land-for-sale",
     ],
     "PigiaMe": [
-        "https://www.pigiame.co.ke/properties",
-        "https://www.pigiame.co.ke/search?q=house+nairobi&category=2",
+        "https://www.pigiame.co.ke/real-estate",
+        "https://www.pigiame.co.ke/real-estate/houses-for-sale-nairobi",
     ],
     "Property24": [
         "https://www.property24.co.ke/property-for-sale",
@@ -71,7 +81,7 @@ SOURCES = {
     ],
     "JumiaHouse": [
         "https://www.jumia.co.ke/real-estate/houses-for-sale/",
-        "https://www.jumia.co.ke/real-estate/houses-for-rent/",
+        "https://www.jumia.co.ke/real-estate/apartments-for-rent/",
     ],
 }
 
@@ -141,14 +151,15 @@ def get_listing_urls(source_name: str) -> str:
 
     # Heuristic path fragments that appear in property detail URLs
     hints_by_site = {
-        "BuyRentKenya": ["/listing/", "/property/", "/listings/"],
-        "PigiaMe": ["/item/", "/ad/", "/property/"],
-        "Property24": ["/property-details/", "/for-sale/", "/to-rent/", "/listing/"],
-        "JumiaHouse": ["/real-estate/", "/property/", "/house/"],
+        "BuyRentKenya": ["/listing/", "/property/", "/listings/", "/house", "/apartment", "/land"],
+        "PigiaMe": ["/item/", "/ad/", "/property/", "/houses/", "/real-estate/"],
+        "Property24": ["/property-details/", "/for-sale/", "/to-rent/", "/listing/", "/property-for-sale", "/property-to-rent"],
+        "JumiaHouse": ["/real-estate/", "/property/", "/house/", "/apartment/"],
     }
     hints = hints_by_site.get(source_name, ["/listing/", "/property/", "/item/", "/ad/"])
 
     all_urls: list[str] = []
+    errors: list[str] = []
     for page_url in pages[:2]:          # sample first two category pages
         try:
             html = _fetch_html(page_url)
@@ -157,10 +168,13 @@ def get_listing_urls(source_name: str) -> str:
             if len(all_urls) >= 20:
                 break
         except Exception as exc:
-            return json.dumps({"error": f"Failed to fetch {page_url}: {exc}"})
+            errors.append(f"{page_url}: {exc}")
+            continue   # try next URL instead of aborting
 
     unique = list(dict.fromkeys(all_urls))[:20]
-    return json.dumps({"source": source_name, "urls": unique, "count": len(unique)})
+    if not unique and errors:
+        return json.dumps({"error": f"All URLs failed for {source_name}", "details": errors})
+    return json.dumps({"source": source_name, "urls": unique, "count": len(unique), "errors": errors})
 
 
 @tool

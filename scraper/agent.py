@@ -80,7 +80,7 @@ SYSTEM_PROMPT = dedent("""
     ────────
     1. Call count_saved_today to learn how many have already been saved.
     2. If remaining == 0, respond with a final summary and stop.
-    3. Otherwise pick a source from: BuyRentKenya, PigiaMe, Property24
+    3. Otherwise pick a source from: BuyRentKenya, PigiaMe, Property24, JumiaHouse
     4. Call get_listing_urls(source_name) to get up to 20 candidate URLs.
     5. For each candidate URL (process one at a time):
        a. Call check_duplicate(url) — skip it if exists==true.
@@ -89,7 +89,8 @@ SYSTEM_PROMPT = dedent("""
        d. Call save_property_listing(property_json) to upload images and save.
        e. After each successful save, re-check remaining count.
        f. Stop as soon as you have saved enough to reach the daily target.
-    6. If one source doesn't yield enough listings, try the next source.
+    6. If one source fails or doesn't yield enough listings, immediately try the next source.
+       Try all four sources before giving up.
     7. Once the target is reached, output a concise summary:
        "Saved X/Y properties today. [List titles + cities]"
 
