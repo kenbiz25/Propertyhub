@@ -73,29 +73,26 @@ def _get_extractor() -> ChatOpenAI:
 # ── Source site definitions ────────────────────────────────────────────────────
 
 SOURCES = {
-    # Classifieds — server-rendered HTML, light bot protection, lots of fresh listings
     "JijiKenya": [
-        "https://jiji.co.ke/nairobi/houses-apartments-for-rent",
         "https://jiji.co.ke/nairobi/houses-apartments-for-sale",
+        "https://jiji.co.ke/nairobi/houses-apartments-for-rent",
+        "https://jiji.co.ke/real-estate",
         "https://jiji.co.ke/nairobi/land-and-plots-for-sale",
-        "https://jiji.co.ke/mombasa/houses-apartments-for-rent",
+    ],
+    "Property24": [
+        "https://www.property24.co.ke/property-for-sale-in-nairobi-c1890",
+        "https://www.property24.co.ke/houses-for-sale-in-nairobi-c1890",
+        "https://www.property24.co.ke/property-to-rent-in-nairobi-p95",
+    ],
+    "BuyRentKenya": [
+        "https://www.buyrentkenya.com/houses-for-sale/nairobi",
+        "https://www.buyrentkenya.com/houses-for-rent/nairobi",
     ],
     "OLXKenya": [
         "https://www.olx.co.ke/real-estate_c1368",
-        "https://www.olx.co.ke/houses-apartments-for-rent_c1370",
-        "https://www.olx.co.ke/houses-apartments-for-sale_c1371",
     ],
-    # Independent Kenyan agency sites — simple HTML, no bot protection
     "KenyaAgents": [
         "https://www.landlord.co.ke/properties",
-        "https://www.housesinkenya.co.ke/listings",
-        "https://www.rentals.co.ke/properties",
-        "https://www.kenyahomes.com/listings",
-    ],
-    # Established portal — property-for-sale was returning 200 OK
-    "Property24": [
-        "https://www.property24.co.ke/property-for-sale",
-        "https://www.property24.co.ke/property-to-rent",
     ],
 }
 
@@ -119,7 +116,7 @@ def _fetch_html(url: str, timeout: int = 20, retries: int = 3) -> str:
             resp = cs.get(url, headers=_base_headers(), timeout=timeout, allow_redirects=True)
             if resp.status_code == 200:
                 return resp.text
-            if resp.status_code in (403, 503):
+            if resp.status_code in (403, 503, 429):
                 last_exc = Exception(f"HTTP {resp.status_code} on attempt {attempt + 1}")
                 continue
             resp.raise_for_status()
@@ -156,15 +153,19 @@ def _extract_links(html: str, base_url: str, pattern_hints: list[str]) -> list[s
     soup = BeautifulSoup(html, "lxml")
     domain = urlparse(base_url).netloc
     candidates = set()
+    generic_hints = ["/listing", "/property", "/item", "/ad", "/details", "/sale/", "/rent/"]
     for a in soup.find_all("a", href=True):
-        href = urljoin(base_url, a["href"])
+        href = urljoin(base_url, a["href"]).split("?")[0].split("#")[0]
         parsed = urlparse(href)
-        if parsed.netloc != domain:
+        if parsed.netloc and domain not in parsed.netloc:
             continue
         path = parsed.path.lower()
-        if any(hint in path for hint in pattern_hints):
-            candidates.add(href.split("?")[0])   # drop query params
-    return list(candidates)
+        if len(path) > 15 and (
+            any(hint in path for hint in pattern_hints)
+            or any(hint in path for hint in generic_hints)
+        ):
+            candidates.add(href)
+    return list(candidates)[:30]
 
 
 # Domains to exclude from DuckDuckGo results AND from direct scraping.
@@ -174,8 +175,8 @@ BLOCKED_DOMAINS = {
     "facebook.com", "instagram.com", "twitter.com", "x.com",
     "youtube.com", "wikipedia.org", "linkedin.com", "tiktok.com",
     "google.com", "duckduckgo.com", "bing.com",
-    # Kenyan portals confirmed to block scrapers
-    "buyrentkenya.com", "pigiame.co.ke", "jumia.co.ke",
+    # Jumia real-estate returns 403 consistently
+    "jumia.co.ke",
 }
 
 _DDG_SKIP_DOMAINS = BLOCKED_DOMAINS   # alias used in search_duckduckgo
@@ -238,10 +239,11 @@ def get_listing_urls(source_name: str) -> str:
 
     # Heuristic path fragments that appear in property detail URLs
     hints_by_site = {
-        "JijiKenya":   ["/houses-apartments-for-rent/", "/houses-apartments-for-sale/", "/land-and-plots-for-sale/"],
-        "OLXKenya":    ["/item/", "/ad/"],
-        "KenyaAgents": ["/listing/", "/property/", "/properties/", "/house/", "/apartment/", "/land/"],
-        "Property24":  ["/property-details/", "/for-sale/", "/to-rent/", "/listing/"],
+        "JijiKenya":     ["/nairobi/", "/houses-apartments", "/land-and-plots", "/real-estate"],
+        "Property24":    ["/property-for-sale", "/property-to-rent", "/property-details", "/houses-for-sale"],
+        "BuyRentKenya":  ["/houses-for-sale", "/houses-for-rent", "/property-for-sale", "/property-for-rent"],
+        "OLXKenya":      ["/item/", "/ad/"],
+        "KenyaAgents":   ["/listing", "/property", "/house", "/apartment"],
     }
     hints = hints_by_site.get(source_name, ["/listing/", "/property/", "/item/", "/ad/"])
 
