@@ -42,6 +42,7 @@ from tools import (
     get_listing_urls,
     save_property_listing,
     scrape_property_details,
+    search_duckduckgo,
 )
 
 # ── State ──────────────────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ class ScraperState(TypedDict):
 # ── LLM + tools ───────────────────────────────────────────────────────────────
 
 TOOLS = [
+    search_duckduckgo,
     get_listing_urls,
     scrape_property_details,
     check_duplicate,
@@ -80,18 +82,25 @@ SYSTEM_PROMPT = dedent("""
     ────────
     1. Call count_saved_today to learn how many have already been saved.
     2. If remaining == 0, respond with a final summary and stop.
-    3. Otherwise pick a source. Try in this order (most reliable first):
-       JijiKenya, OLXKenya, Property24, KenyaAgents
-    4. Call get_listing_urls(source_name) to get up to 20 candidate URLs.
-    5. For each candidate URL (process one at a time):
+    3. Get property URLs using ANY combination of these strategies:
+       a. search_duckduckgo — use varied Kenya property queries such as:
+            "houses for sale Nairobi Kenya"
+            "apartments for rent Kilimani Kenya"
+            "land for sale Kiambu Kenya"
+            "3 bedroom house Westlands for rent"
+            "property for sale Mombasa Kenya"
+          Run 2-3 different searches to get diverse URLs.
+       b. get_listing_urls — direct source crawl. Try in order:
+            JijiKenya, OLXKenya, Property24, KenyaAgents
+    4. For each candidate URL (process one at a time):
        a. Call check_duplicate(url) — skip it if exists==true.
        b. Call scrape_property_details(url) to extract the property data.
        c. If extraction failed or the listing lacks a title/city, skip it.
        d. Call save_property_listing(property_json) to upload images and save.
        e. After each successful save, re-check remaining count.
        f. Stop as soon as you have saved enough to reach the daily target.
-    6. If one source fails or yields 0 URLs, immediately move to the next source.
-       Try all four sources before giving up: JijiKenya, OLXKenya, Property24, KenyaAgents.
+    5. If one strategy yields no results, switch to another immediately.
+       Combine DuckDuckGo searches with direct source crawling to hit the target.
     7. Once the target is reached, output a concise summary:
        "Saved X/Y properties today. [List titles + cities]"
 

@@ -141,7 +141,55 @@ def _extract_links(html: str, base_url: str, pattern_hints: list[str]) -> list[s
     return list(candidates)
 
 
+# Domains to exclude from DuckDuckGo results (not property listing pages)
+_DDG_SKIP_DOMAINS = {
+    "facebook.com", "instagram.com", "twitter.com", "x.com",
+    "youtube.com", "wikipedia.org", "linkedin.com", "tiktok.com",
+    "google.com", "duckduckgo.com", "bing.com",
+}
+
 # ── LangGraph tools ────────────────────────────────────────────────────────────
+
+@tool
+def search_duckduckgo(query: str) -> str:
+    """
+    Search DuckDuckGo for Kenyan property listings and return up to 15 result URLs.
+
+    Use specific Kenya-focused queries, for example:
+      "houses for sale Nairobi Kenya"
+      "apartments for rent Kilimani site:jiji.co.ke"
+      "land for sale Kiambu Kenya"
+      "3 bedroom house Westlands for rent"
+
+    Returns JSON with a list of URLs suitable for scrape_property_details.
+    """
+    ddg_url = "https://html.duckduckgo.com/html/"
+    try:
+        time.sleep(REQUEST_DELAY)
+        with httpx.Client(headers=HEADERS, follow_redirects=True, timeout=20) as client:
+            resp = client.get(ddg_url, params={"q": query, "kl": "ke-en"})
+            resp.raise_for_status()
+    except Exception as exc:
+        return json.dumps({"error": f"DuckDuckGo request failed: {exc}", "query": query})
+
+    soup = BeautifulSoup(resp.text, "lxml")
+    urls: list[str] = []
+
+    for a in soup.select("a.result__a, a.result__url"):
+        href = a.get("href", "")
+        if not href.startswith("http"):
+            continue
+        domain = urlparse(href).netloc.lstrip("www.")
+        if any(skip in domain for skip in _DDG_SKIP_DOMAINS):
+            continue
+        clean = href.split("?")[0]
+        if clean not in urls:
+            urls.append(clean)
+        if len(urls) >= 15:
+            break
+
+    return json.dumps({"query": query, "urls": urls, "count": len(urls)})
+
 
 @tool
 def get_listing_urls(source_name: str) -> str:
@@ -149,7 +197,7 @@ def get_listing_urls(source_name: str) -> str:
     Fetch the first listing page of a named source site and return up to 20
     property detail page URLs as a JSON array.
 
-    source_name must be one of: BuyRentKenya, PigiaMe, Property24, JumiaHouse
+    source_name must be one of: JijiKenya, OLXKenya, Property24, KenyaAgents
     """
     pages = SOURCES.get(source_name)
     if not pages:
