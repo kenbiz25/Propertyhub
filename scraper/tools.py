@@ -15,8 +15,12 @@ from textwrap import dedent
 from typing import List
 from urllib.parse import urljoin, urlparse
 
+import random
+
+import cloudscraper
 import httpx
 from bs4 import BeautifulSoup
+from fake_useragent import UserAgent
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from PIL import Image
@@ -25,29 +29,32 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 import firebase_client as fb
 from models import AMENITY_SLUGS, PROPERTY_TYPES, FirestoreProperty, ScrapedProperty
 
-# ── Shared HTTP client ─────────────────────────────────────────────────────────
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
-}
+# ── Shared HTTP helpers ────────────────────────────────────────────────────────
 
 REQUEST_DELAY = float(os.environ.get("SCRAPER_REQUEST_DELAY", "2"))
+
+try:
+    _ua = UserAgent()
+    def _random_ua() -> str:
+        return _ua.random
+except Exception:
+    def _random_ua() -> str:
+        return (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        )
+
+def _base_headers() -> dict:
+    return {
+        "User-Agent": _random_ua(),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+    }
 
 # OpenAI model used only for extraction (shared with agent)
 _extractor_llm = None
@@ -95,13 +102,32 @@ SOURCES = {
 
 # ── HTTP fetch helpers ─────────────────────────────────────────────────────────
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-def _fetch_html(url: str, timeout: int = 20) -> str:
-    time.sleep(REQUEST_DELAY)
-    with httpx.Client(headers=HEADERS, follow_redirects=True, timeout=timeout) as client:
-        resp = client.get(url)
-        resp.raise_for_status()
-        return resp.text
+def _fetch_html(url: str, timeout: int = 20, retries: int = 3) -> str:
+    """Fetch HTML using cloudscraper (bypasses Cloudflare/bot challenges).
+    Falls back to plain httpx on connection errors."""
+    cs = cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
+    last_exc: Exception = RuntimeError("No attempts made")
+
+    for attempt in range(retries):
+        if attempt > 0:
+            delay = random.uniform(8, 15) if attempt == 1 else random.uniform(15, 25)
+            time.sleep(delay)
+        else:
+            time.sleep(REQUEST_DELAY)
+
+        try:
+            resp = cs.get(url, headers=_base_headers(), timeout=timeout, allow_redirects=True)
+            if resp.status_code == 200:
+                return resp.text
+            if resp.status_code in (403, 503):
+                last_exc = Exception(f"HTTP {resp.status_code} on attempt {attempt + 1}")
+                continue
+            resp.raise_for_status()
+            return resp.text
+        except Exception as exc:
+            last_exc = exc
+
+    raise last_exc
 
 
 def _clean_html(html: str, base_url: str) -> tuple[str, list[str]]:
@@ -172,9 +198,9 @@ def search_duckduckgo(query: str) -> str:
     ddg_url = "https://html.duckduckgo.com/html/"
     try:
         time.sleep(REQUEST_DELAY)
-        with httpx.Client(headers=HEADERS, follow_redirects=True, timeout=20) as client:
-            resp = client.get(ddg_url, params={"q": query, "kl": "ke-en"})
-            resp.raise_for_status()
+        cs = cloudscraper.create_scraper()
+        resp = cs.get(ddg_url, headers=_base_headers(), params={"q": query, "kl": "ke-en"}, timeout=20)
+        resp.raise_for_status()
     except Exception as exc:
         return json.dumps({"error": f"DuckDuckGo request failed: {exc}", "query": query})
 
@@ -432,7 +458,7 @@ MAX_IMAGE_BYTES = 15 * 1024 * 1024   # 15 MB hard cap before PIL decode
 def _download_image(url: str) -> tuple[bytes | None, str]:
     """Download an image, validate it, resize, and return (jpeg_bytes, content_type)."""
     try:
-        with httpx.Client(headers=HEADERS, follow_redirects=True, timeout=15) as client:
+        with httpx.Client(headers=_base_headers(), follow_redirects=True, timeout=15) as client:
             resp = client.get(url)
             resp.raise_for_status()
             content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
