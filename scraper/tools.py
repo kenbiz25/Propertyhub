@@ -141,12 +141,18 @@ def _extract_links(html: str, base_url: str, pattern_hints: list[str]) -> list[s
     return list(candidates)
 
 
-# Domains to exclude from DuckDuckGo results (not property listing pages)
-_DDG_SKIP_DOMAINS = {
+# Domains to exclude from DuckDuckGo results AND from direct scraping.
+# These sites either block scrapers (403/503) or return invalid pages (404).
+BLOCKED_DOMAINS = {
+    # Social / search — not property pages
     "facebook.com", "instagram.com", "twitter.com", "x.com",
     "youtube.com", "wikipedia.org", "linkedin.com", "tiktok.com",
     "google.com", "duckduckgo.com", "bing.com",
+    # Kenyan portals confirmed to block scrapers
+    "buyrentkenya.com", "pigiame.co.ke", "jumia.co.ke",
 }
+
+_DDG_SKIP_DOMAINS = BLOCKED_DOMAINS   # alias used in search_duckduckgo
 
 # ── LangGraph tools ────────────────────────────────────────────────────────────
 
@@ -240,6 +246,10 @@ def scrape_property_details(url: str) -> str:
 
     Returns JSON with key "property" on success, or "error" on failure.
     """
+    domain = urlparse(url).netloc.lstrip("www.")
+    if any(blocked in domain for blocked in BLOCKED_DOMAINS):
+        return json.dumps({"error": f"Domain is blocked/unsupported: {domain}. Use URLs from search_duckduckgo or get_listing_urls instead."})
+
     try:
         html = _fetch_html(url)
     except Exception as exc:

@@ -106,6 +106,9 @@ SYSTEM_PROMPT = dedent("""
 
     RULES
     ─────
+    - NEVER invent or guess URLs from your own knowledge. ALL URLs must come
+      from search_duckduckgo or get_listing_urls tool results only.
+    - Do NOT use buyrentkenya.com, pigiame.co.ke, or jumia.co.ke — they block scrapers.
     - NEVER save the same source_url twice (always check_duplicate first).
     - NEVER fabricate or guess property data — only save what is on the page.
     - If a price looks like USD/EUR, skip that listing.
