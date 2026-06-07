@@ -35,7 +35,7 @@ service cloud.firestore {
     // ── View events ────────────────────────────────────────────────────────
 
     match /view_events/{eventId} {
-      allow read:   if isSignedIn();
+      allow read:   if true;   // public — used for homepage trending/featured sections
       allow create: if isSignedIn()
                     && request.resource.data.keys().hasAll(["property_id", "created_at"]);
     }
