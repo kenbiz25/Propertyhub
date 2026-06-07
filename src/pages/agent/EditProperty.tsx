@@ -18,6 +18,7 @@ import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { COUNTRIES } from "@/lib/constants/countries";
 import { useCities } from "@/hooks/useCities";
+import { CityCombobox } from "@/components/ui/CityCombobox";
 import { Plus, Trash2, X } from "lucide-react";
 import { validateImages } from "@/lib/uploadValidation";
 
@@ -276,13 +277,13 @@ export default function EditProperty() {
             </Select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">City *</label>
-            <Select value={form.city} onValueChange={(v) => setForm((s) => ({ ...s, city: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent className="max-h-64">
-                {cityOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <label className="text-sm text-muted-foreground">City / Town *</label>
+            <CityCombobox
+              value={form.city}
+              onChange={(v) => setForm((s) => ({ ...s, city: v }))}
+              options={cityOptions}
+              disabled={cityOptions.length === 0}
+            />
           </div>
         </div>
 

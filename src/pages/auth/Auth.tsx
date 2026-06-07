@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { COUNTRIES } from "@/lib/constants/countries";
 import { useCities } from "@/hooks/useCities";
+import { CityCombobox } from "@/components/ui/CityCombobox";
 
 // ⬇️ Firebase imports
 import { auth, db } from "@/lib/firebaseClient";
@@ -333,25 +334,16 @@ const Auth = () => {
                   </Select>
                 </div>
 
-                {/* City dropdown (depends on country) */}
+                {/* City/Town combobox (depends on country) */}
                 <div className="space-y-2">
-                  <Label>City</Label>
-                  <Select
+                  <Label>City / Town</Label>
+                  <CityCombobox
                     value={formData.city}
-                    onValueChange={(v) => setFormData({ ...formData, city: v })}
+                    onChange={(v) => setFormData({ ...formData, city: v })}
+                    options={cityOptions}
+                    placeholder={citiesLoading ? "Loading…" : cityOptions.length === 0 ? "Select country first" : "Search city/town…"}
                     disabled={cityOptions.length === 0}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={citiesLoading ? "Loading cities…" : cityOptions.length === 0 ? "Select country first" : "Select city"} />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {cityOptions.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
               </>
             )}

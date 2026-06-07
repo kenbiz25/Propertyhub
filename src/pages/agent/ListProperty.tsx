@@ -18,6 +18,7 @@ import { addDoc, collection, doc, serverTimestamp, updateDoc, runTransaction } f
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { COUNTRIES } from "@/lib/constants/countries";
 import { useCities } from "@/hooks/useCities";
+import { CityCombobox } from "@/components/ui/CityCombobox";
 import { Plus, Trash2 } from "lucide-react";
 import { validateImages } from "@/lib/uploadValidation";
 
@@ -339,22 +340,13 @@ export default function ListProperty() {
             </Select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">City *</label>
-            <Select
+            <label className="text-sm text-muted-foreground">City / Town *</label>
+            <CityCombobox
               value={form.city}
-              onValueChange={(v) => setForm((s) => ({ ...s, city: v }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select city" />
-              </SelectTrigger>
-              <SelectContent className="max-h-64">
-                {cityOptions.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(v) => setForm((s) => ({ ...s, city: v }))}
+              options={cityOptions}
+              disabled={cityOptions.length === 0}
+            />
           </div>
         </div>
 

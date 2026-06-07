@@ -5,6 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { COUNTRIES } from "@/lib/constants/countries";
 import { useCities } from "@/hooks/useCities";
+import { CityCombobox } from "@/components/ui/CityCombobox";
 
 export default function PropertyFiltersBar({ filters, onChange }:{filters:any; onChange:(f:any)=>void}) {
   const { data: cityOptions = [], isLoading: citiesLoading } = useCities(filters.country);
@@ -15,20 +16,13 @@ export default function PropertyFiltersBar({ filters, onChange }:{filters:any; o
         <SelectTrigger><SelectValue placeholder="Country" /></SelectTrigger>
         <SelectContent>{COUNTRIES.map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
       </Select>
-      <Select
+      <CityCombobox
         value={filters.city ?? ""}
-        onValueChange={(v)=>onChange({ ...filters, city: v })}
+        onChange={(v) => onChange({ ...filters, city: v })}
+        options={cityOptions}
+        placeholder={citiesLoading ? "Loading…" : cityOptions.length === 0 ? "Select country first" : "City / Town"}
         disabled={cityOptions.length === 0}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder={citiesLoading ? "Loading cities…" : cityOptions.length === 0 ? "Select country first" : "City"} />
-        </SelectTrigger>
-        <SelectContent>
-          {cityOptions.map((c)=>(
-            <SelectItem key={c} value={c}>{c}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      />
       <Select value={filters.listing_type ?? ""} onValueChange={(v)=>onChange({ ...filters, listing_type: v as any })}>
         <SelectTrigger><SelectValue placeholder="Rent/Sale" /></SelectTrigger>
         <SelectContent>
