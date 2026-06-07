@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -29,14 +28,33 @@ export function CityCombobox({
   value,
   onChange,
   options,
-  placeholder = "Search city/town…",
+  placeholder = "Search or type city/town…",
   disabled = false,
   className,
 }: CityComboboxProps) {
   const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+
+  const trimmed = inputValue.trim();
+
+  // Options that match the current search input
+  const filtered = trimmed
+    ? options.filter((c) => c.toLowerCase().includes(trimmed.toLowerCase()))
+    : options;
+
+  // Show "Use '[typed]'" only when the typed text doesn't exactly match any option
+  const showCustomOption =
+    trimmed.length > 0 &&
+    !options.some((c) => c.toLowerCase() === trimmed.toLowerCase());
+
+  function select(city: string) {
+    onChange(city === value ? "" : city);
+    setInputValue("");
+    setOpen(false);
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setInputValue(""); }}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -52,19 +70,35 @@ export function CityCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Type to search…" />
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Type to search or enter custom…"
+            value={inputValue}
+            onValueChange={setInputValue}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && trimmed && showCustomOption) {
+                select(trimmed);
+              }
+            }}
+          />
           <CommandList>
-            <CommandEmpty>No town found.</CommandEmpty>
-            <CommandGroup>
-              {options.map((city) => (
+            {showCustomOption && (
+              <CommandGroup heading="Custom entry">
+                <CommandItem value={trimmed} onSelect={() => select(trimmed)}>
+                  <Plus className="mr-2 h-4 w-4 text-muted-foreground" />
+                  Use &ldquo;{trimmed}&rdquo;
+                </CommandItem>
+              </CommandGroup>
+            )}
+            <CommandGroup heading={trimmed ? "Suggestions" : "All towns"}>
+              {filtered.length === 0 && !showCustomOption && (
+                <p className="py-2 px-3 text-sm text-muted-foreground">No match. Type to add custom.</p>
+              )}
+              {filtered.map((city) => (
                 <CommandItem
                   key={city}
                   value={city}
-                  onSelect={(selected) => {
-                    onChange(selected === value ? "" : selected);
-                    setOpen(false);
-                  }}
+                  onSelect={() => select(city)}
                 >
                   <Check
                     className={cn(
