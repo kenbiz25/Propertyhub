@@ -6,7 +6,11 @@ import { getCitiesForCountry } from "@/lib/constants/countries";
 async function fetchCitiesByCountry(country?: string): Promise<string[]> {
   if (!country) return [];
 
-  // 1) Preferred source: cities collection
+  // Always start with the full static list so no towns are ever missing
+  const staticList = getCitiesForCountry(country);
+  const extra = new Set<string>();
+
+  // Merge any additional cities from the Firestore cities collection
   try {
     const qCities = query(
       collection(db, "cities"),
@@ -14,36 +18,31 @@ async function fetchCitiesByCountry(country?: string): Promise<string[]> {
       limit(300)
     );
     const snap = await getDocs(qCities);
-    const list = snap.docs
-      .map((d) => String(d.data()?.name ?? d.id))
-      .filter(Boolean);
-    if (list.length > 0) {
-      return Array.from(new Set(list)).sort();
-    }
-  } catch {
-    // ignore and fallback to properties
-  }
+    snap.docs.forEach((d) => {
+      const name = String(d.data()?.name ?? d.id).trim();
+      if (name) extra.add(name);
+    });
+  } catch { /* ignore */ }
 
-  // 2) Fallback: derive from properties collection
+  // Merge any cities that appear on published properties
   try {
     const qProps = query(
       collection(db, "properties"),
       where("country", "==", country),
-      where("published", "==", true),
+      where("status", "==", "published"),
       limit(500)
     );
     const snap = await getDocs(qProps);
-    const list = snap.docs
-      .map((d) => String(d.data()?.city ?? ""))
-      .filter(Boolean);
+    snap.docs.forEach((d) => {
+      const city = String(d.data()?.city ?? "").trim();
+      if (city) extra.add(city);
+    });
+  } catch { /* ignore */ }
 
-    const deduped = Array.from(new Set(list)).sort();
-    if (deduped.length > 0) return deduped;
-  } catch {
-    // ignore and fallback to static list
-  }
-
-  return getCitiesForCountry(country);
+  // Static list first (already sorted), then any new names from Firestore
+  const staticSet = new Set(staticList);
+  const newFromFirestore = Array.from(extra).filter((c) => !staticSet.has(c)).sort();
+  return [...staticList, ...newFromFirestore];
 }
 
 export function useCities(country?: string) {
